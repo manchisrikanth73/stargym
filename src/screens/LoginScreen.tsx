@@ -12,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { signIn, signUp } from '../services/auth';
+import { signIn, signUp, resetPassword } from '../services/auth';
 import { colors } from '../theme/colors';
 
 export default function LoginScreen() {
@@ -46,10 +46,24 @@ export default function LoginScreen() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      Alert.alert('Enter email', 'Type your email address above first, then tap Forgot Password.');
+      return;
+    }
+    try {
+      await resetPassword(email.trim());
+      Alert.alert('Email sent', `A password reset link has been sent to ${email.trim()}. Check your inbox and sign in with the new password.`);
+    } catch (err: any) {
+      Alert.alert('Error', friendlyError(err.code));
+    }
+  };
+
   const friendlyError = (code: string) => {
     if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential')
       return 'Invalid email or password.';
-    if (code === 'auth/email-already-in-use') return 'Email already registered.';
+    if (code === 'auth/email-already-in-use')
+      return 'This email is already registered. Log in with your previous password, or tap "Forgot Password?" to reset it.';
     if (code === 'auth/weak-password') return 'Password must be at least 6 characters.';
     if (code === 'auth/invalid-email') return 'Please enter a valid email.';
     return 'Something went wrong. Please try again.';
@@ -118,6 +132,13 @@ export default function LoginScreen() {
               <Ionicons name={showPass ? 'eye-off-outline' : 'eye-outline'} size={18} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
+
+          {/* Forgot password — sign in only */}
+          {!isSignUp && (
+            <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotBtn}>
+              <Text style={styles.forgotText}>Forgot Password?</Text>
+            </TouchableOpacity>
+          )}
 
           {/* Submit */}
           <TouchableOpacity style={styles.btn} onPress={handleSubmit} disabled={loading}>
@@ -188,4 +209,6 @@ const styles = StyleSheet.create({
   toggleBtn: { marginTop: 18, alignItems: 'center' },
   toggleText: { color: colors.textMuted, fontSize: 14 },
   toggleLink: { color: colors.primary, fontWeight: '700' },
+  forgotBtn: { alignSelf: 'flex-end', marginBottom: 8 },
+  forgotText: { color: colors.textMuted, fontSize: 13 },
 });

@@ -1,6 +1,7 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
   updateProfile,
   signOut,
   onAuthStateChanged,
@@ -41,6 +42,8 @@ export const signIn = (email: string, password: string) =>
   signInWithEmailAndPassword(auth, email, password);
 
 export const logOut = () => signOut(auth);
+
+export const resetPassword = (email: string) => sendPasswordResetEmail(auth, email);
 
 export const onAuthChange = (cb: (user: User | null) => void) =>
   onAuthStateChanged(auth, cb);
