@@ -8,11 +8,14 @@ import {
 } from 'firebase/auth';
 import { auth } from './firebase';
 import { createUserProfile, getUserProfile } from './users';
+import { sendNewMemberNotification } from './email';
 
 export const signUp = async (email: string, password: string, displayName: string) => {
   const cred = await createUserWithEmailAndPassword(auth, email, password);
   await updateProfile(cred.user, { displayName });
   await createUserProfile(cred.user.uid, email, displayName);
+  // Non-blocking — don't fail signup if email fails
+  sendNewMemberNotification(displayName, email).catch(() => {});
   return cred;
 };
 

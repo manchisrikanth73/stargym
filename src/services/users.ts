@@ -37,7 +37,7 @@ export async function createUserProfile(uid: string, email: string, displayName:
     phone: '',
     role: 'member',
     membershipType: 'basic',
-    isActive: true,
+    isActive: false,
     joinedAt: serverTimestamp(),
   } satisfies Omit<UserProfile, 'joinedAt'> & { joinedAt: any });
 }

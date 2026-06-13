@@ -13,6 +13,7 @@ import { DrawerActions, useNavigation } from '@react-navigation/native';
 import dayjs from 'dayjs';
 import { auth } from '../services/firebase';
 import { isCheckedInToday, getMonthlyCount } from '../services/attendance';
+import { getUserProfile } from '../services/users';
 import { colors } from '../theme/colors';
 
 const QUOTES = [
@@ -25,6 +26,7 @@ export default function DashboardScreen() {
   const navigation = useNavigation<any>();
   const [checkedIn, setCheckedIn] = useState(false);
   const [monthlyCount, setMonthlyCount] = useState(0);
+  const [isActive, setIsActive] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const user = auth.currentUser;
@@ -38,14 +40,17 @@ export default function DashboardScreen() {
   };
 
   const loadStats = useCallback(async () => {
+    const uid = user?.uid;
     const now = new Date();
-    const [ci, mc] = await Promise.all([
+    const [ci, mc, profile] = await Promise.all([
       isCheckedInToday(),
       getMonthlyCount(now.getFullYear(), now.getMonth() + 1),
+      uid ? getUserProfile(uid) : Promise.resolve(null),
     ]);
     setCheckedIn(ci);
     setMonthlyCount(mc);
-  }, []);
+    setIsActive(profile?.isActive ?? true);
+  }, [user?.uid]);
 
   useEffect(() => { loadStats(); }, [loadStats]);
 
@@ -72,6 +77,17 @@ export default function DashboardScreen() {
         </View>
       </View>
 
+      {/* Pending approval banner */}
+      {!isActive && (
+        <View style={styles.pendingBanner}>
+          <Ionicons name="time-outline" size={20} color={colors.secondary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.pendingTitle}>Account Pending Approval</Text>
+            <Text style={styles.pendingSub}>The gym admin has been notified and will activate your account shortly.</Text>
+          </View>
+        </View>
+      )}
+
       {/* Greeting */}
       <View style={styles.greetSection}>
         <Text style={styles.greetSub}>{greeting()},</Text>
@@ -97,18 +113,21 @@ export default function DashboardScreen() {
 
       {/* Check-In Card */}
       <TouchableOpacity
-        style={[styles.checkinCard, checkedIn && styles.checkinCardDone]}
-        onPress={() => checkedIn ? Alert.alert('Already checked in!', 'See you tomorrow 💪') : navigation.navigate('Checkin')}
+        style={[styles.checkinCard, checkedIn && styles.checkinCardDone, !isActive && styles.checkinCardDisabled]}
+        onPress={() => {
+          if (!isActive) { Alert.alert('Account pending', 'Your account is awaiting admin approval.'); return; }
+          checkedIn ? Alert.alert('Already checked in!', 'See you tomorrow 💪') : navigation.navigate('Checkin');
+        }}
         activeOpacity={0.85}
       >
         <View style={styles.checkinIconWrap}>
-          <Ionicons name={checkedIn ? 'checkmark-circle' : 'qr-code'} size={32} color="#fff" />
+          <Ionicons name={!isActive ? 'lock-closed' : checkedIn ? 'checkmark-circle' : 'qr-code'} size={32} color="#fff" />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.checkinTitle}>{checkedIn ? 'Checked In!' : 'Check In Now'}</Text>
-          <Text style={styles.checkinSub}>{checkedIn ? 'Great work today 💪' : 'Tap to show your QR code'}</Text>
+          <Text style={styles.checkinTitle}>{!isActive ? 'Account Pending' : checkedIn ? 'Checked In!' : 'Check In Now'}</Text>
+          <Text style={styles.checkinSub}>{!isActive ? 'Awaiting admin approval' : checkedIn ? 'Great work today 💪' : 'Tap to show your QR code'}</Text>
         </View>
-        {!checkedIn && <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />}
+        {isActive && !checkedIn && <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />}
       </TouchableOpacity>
 
       {/* Quick Actions */}
@@ -207,6 +226,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: `${colors.secondary}55`,
   },
+  checkinCardDisabled: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    shadowOpacity: 0,
+    elevation: 0,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  pendingBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: `${colors.secondary}18`,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: `${colors.secondary}44`,
+  },
+  pendingTitle: { color: colors.secondary, fontSize: 14, fontWeight: '700', marginBottom: 2 },
+  pendingSub: { color: colors.textMuted, fontSize: 12, lineHeight: 18 },
   checkinIconWrap: {
     width: 56,
     height: 56,
