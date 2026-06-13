@@ -1,16 +1,15 @@
-// Replace the config below with your Firebase project values.
-// Get them from: Firebase Console → Project Settings → Your apps → SDK setup
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
-  projectId: 'YOUR_PROJECT_ID',
-  storageBucket: 'YOUR_PROJECT_ID.appspot.com',
-  messagingSenderId: 'YOUR_SENDER_ID',
-  appId: 'YOUR_APP_ID',
+  apiKey: 'AIzaSyC6VlDf-tSe728J8BnaCmKcc1WssCl6hXo',
+  authDomain: 'stargym-bec65.firebaseapp.com',
+  projectId: 'stargym-bec65',
+  storageBucket: 'stargym-bec65.firebasestorage.app',
+  messagingSenderId: '153344338653',
+  appId: '1:153344338653:web:ec2b17d9af561487364934',
+  measurementId: 'G-CE1QTZSFH2',
 };
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
