@@ -10,6 +10,7 @@ import {
   RefreshControl,
   Modal,
   Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
@@ -79,6 +80,23 @@ export default function AdminScreen() {
     }
   };
 
+  const confirmDelete = (user: UserProfile) => {
+    if (Platform.OS === 'web') {
+      const name = user.displayName || user.email;
+      if ((window as any).confirm(`Remove ${name} from the members list?`)) {
+        setConfirmUser(user);
+        // immediately trigger delete on web
+        setDeleting(true);
+        deleteUserProfile(user.uid)
+          .then(() => load())
+          .catch((err: any) => Alert.alert('Delete failed', err.message ?? 'Could not remove member.'))
+          .finally(() => { setDeleting(false); setConfirmUser(null); });
+      }
+    } else {
+      setConfirmUser(user);
+    }
+  };
+
   const activeCount = users.filter(u => u.isActive).length;
 
   return (
@@ -139,7 +157,7 @@ export default function AdminScreen() {
             <MemberCard
               user={item}
               onEdit={() => navigation.navigate('AdminUserDetail', { user: item })}
-              onDelete={() => setConfirmUser(item)}
+              onDelete={() => confirmDelete(item)}
             />
           )}
         />
