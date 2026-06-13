@@ -13,12 +13,12 @@ import { logOut } from '../services/auth';
 import { getUserProfile } from '../services/users';
 import { colors } from '../theme/colors';
 
-type NavItem = { label: string; icon: string; screen: string | null; adminOnly?: boolean };
+type NavItem = { label: string; icon: string; screen: string | null; adminOnly?: boolean; memberOnly?: boolean };
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', icon: 'home-outline', screen: 'Dashboard' },
-  { label: 'Check In', icon: 'qr-code-outline', screen: 'Checkin' },
-  { label: 'Attendance', icon: 'calendar-outline', screen: 'Calendar' },
+  { label: 'Check In', icon: 'qr-code-outline', screen: 'Checkin', memberOnly: true },
+  { label: 'Attendance', icon: 'calendar-outline', screen: 'Calendar', memberOnly: true },
   { label: 'Members', icon: 'people-outline', screen: 'Admin', adminOnly: true },
   { label: 'Workouts', icon: 'barbell-outline', screen: null },
   { label: 'Progress', icon: 'bar-chart-outline', screen: null },
@@ -37,7 +37,11 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
     }
   }, [user?.uid]);
 
-  const visibleItems = NAV_ITEMS.filter(item => !item.adminOnly || isAdmin);
+  const visibleItems = NAV_ITEMS.filter(item => {
+    if (item.adminOnly) return isAdmin;
+    if (item.memberOnly) return !isAdmin;
+    return true;
+  });
 
   return (
     <SafeAreaView style={styles.root}>

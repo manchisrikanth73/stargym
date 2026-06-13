@@ -27,6 +27,7 @@ export default function DashboardScreen() {
   const [checkedIn, setCheckedIn] = useState(false);
   const [monthlyCount, setMonthlyCount] = useState(0);
   const [isActive, setIsActive] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const user = auth.currentUser;
@@ -50,6 +51,7 @@ export default function DashboardScreen() {
     setCheckedIn(ci);
     setMonthlyCount(mc);
     setIsActive(profile?.isActive ?? true);
+    setIsAdmin(profile?.role === 'admin');
   }, [user?.uid]);
 
   useEffect(() => { loadStats(); }, [loadStats]);
@@ -111,24 +113,26 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      {/* Check-In Card */}
-      <TouchableOpacity
-        style={[styles.checkinCard, checkedIn && styles.checkinCardDone, !isActive && styles.checkinCardDisabled]}
-        onPress={() => {
-          if (!isActive) { Alert.alert('Account pending', 'Your account is awaiting admin approval.'); return; }
-          checkedIn ? Alert.alert('Already checked in!', 'See you tomorrow 💪') : navigation.navigate('Checkin');
-        }}
-        activeOpacity={0.85}
-      >
-        <View style={styles.checkinIconWrap}>
-          <Ionicons name={!isActive ? 'lock-closed' : checkedIn ? 'checkmark-circle' : 'qr-code'} size={32} color="#fff" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.checkinTitle}>{!isActive ? 'Account Pending' : checkedIn ? 'Checked In!' : 'Check In Now'}</Text>
-          <Text style={styles.checkinSub}>{!isActive ? 'Awaiting admin approval' : checkedIn ? 'Great work today 💪' : 'Tap to show your QR code'}</Text>
-        </View>
-        {isActive && !checkedIn && <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />}
-      </TouchableOpacity>
+      {/* Check-In Card — members only */}
+      {!isAdmin && (
+        <TouchableOpacity
+          style={[styles.checkinCard, checkedIn && styles.checkinCardDone, !isActive && styles.checkinCardDisabled]}
+          onPress={() => {
+            if (!isActive) { Alert.alert('Account pending', 'Your account is awaiting admin approval.'); return; }
+            checkedIn ? Alert.alert('Already checked in!', 'See you tomorrow 💪') : navigation.navigate('Checkin');
+          }}
+          activeOpacity={0.85}
+        >
+          <View style={styles.checkinIconWrap}>
+            <Ionicons name={!isActive ? 'lock-closed' : checkedIn ? 'checkmark-circle' : 'qr-code'} size={32} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.checkinTitle}>{!isActive ? 'Account Pending' : checkedIn ? 'Checked In!' : 'Check In Now'}</Text>
+            <Text style={styles.checkinSub}>{!isActive ? 'Awaiting admin approval' : checkedIn ? 'Great work today 💪' : 'Tap to scan gym QR code'}</Text>
+          </View>
+          {isActive && !checkedIn && <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />}
+        </TouchableOpacity>
+      )}
 
       {/* Quick Actions */}
       <Text style={styles.sectionTitle}>Quick Actions</Text>
