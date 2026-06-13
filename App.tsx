@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { User } from 'firebase/auth';
-import { onAuthChange } from './src/services/auth';
+import { onAuthChange, ensureUserProfile } from './src/services/auth';
 import AppNavigator from './src/navigation/AppNavigator';
 import LoginScreen from './src/screens/LoginScreen';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
@@ -13,7 +13,10 @@ export default function App() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
 
   useEffect(() => {
-    const unsub = onAuthChange(u => setUser(u));
+    const unsub = onAuthChange(async u => {
+      if (u) await ensureUserProfile(u);
+      setUser(u);
+    });
     return unsub;
   }, []);
 
