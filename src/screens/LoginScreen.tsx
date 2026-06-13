@@ -17,6 +17,7 @@ import { colors } from '../theme/colors';
 
 export default function LoginScreen() {
   const [isSignUp, setIsSignUp] = useState(false);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -27,10 +28,14 @@ export default function LoginScreen() {
       Alert.alert('Missing fields', 'Please enter your email and password.');
       return;
     }
+    if (isSignUp && !name.trim()) {
+      Alert.alert('Missing name', 'Please enter your full name.');
+      return;
+    }
     setLoading(true);
     try {
       if (isSignUp) {
-        await signUp(email.trim(), password);
+        await signUp(email.trim(), password, name.trim());
       } else {
         await signIn(email.trim(), password);
       }
@@ -42,7 +47,7 @@ export default function LoginScreen() {
   };
 
   const friendlyError = (code: string) => {
-    if (code === 'auth/user-not-found' || code === 'auth/wrong-password')
+    if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential')
       return 'Invalid email or password.';
     if (code === 'auth/email-already-in-use') return 'Email already registered.';
     if (code === 'auth/weak-password') return 'Password must be at least 6 characters.';
@@ -68,6 +73,21 @@ export default function LoginScreen() {
 
         <View style={styles.card}>
           <Text style={styles.title}>{isSignUp ? 'Create Account' : 'Welcome Back'}</Text>
+
+          {/* Name — sign up only */}
+          {isSignUp && (
+            <View style={styles.inputWrap}>
+              <Ionicons name="person-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Full Name"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="words"
+                value={name}
+                onChangeText={setName}
+              />
+            </View>
+          )}
 
           {/* Email */}
           <View style={styles.inputWrap}>
@@ -109,7 +129,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           {/* Toggle */}
-          <TouchableOpacity onPress={() => setIsSignUp(v => !v)} style={styles.toggleBtn}>
+          <TouchableOpacity onPress={() => { setIsSignUp(v => !v); setName(''); }} style={styles.toggleBtn}>
             <Text style={styles.toggleText}>
               {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
               <Text style={styles.toggleLink}>{isSignUp ? 'Log In' : 'Sign Up'}</Text>
@@ -138,30 +158,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 14,
   },
-  brand: {
-    fontSize: 34,
-    fontWeight: '900',
-    color: colors.primary,
-    letterSpacing: 2,
-  },
-  tagline: {
-    fontSize: 13,
-    color: colors.secondary,
-    letterSpacing: 1,
-    marginBottom: 36,
-  },
-  card: {
-    width: '100%',
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    padding: 24,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 22,
-  },
+  brand: { fontSize: 34, fontWeight: '900', color: colors.primary, letterSpacing: 2 },
+  tagline: { fontSize: 13, color: colors.secondary, letterSpacing: 1, marginBottom: 36 },
+  card: { width: '100%', backgroundColor: colors.surface, borderRadius: 20, padding: 24 },
+  title: { fontSize: 20, fontWeight: '700', color: colors.text, marginBottom: 22 },
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
