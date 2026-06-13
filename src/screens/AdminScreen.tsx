@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { useNavigation, DrawerActions, useFocusEffect } from '@react-navigation/native';
 import QRCode from 'react-native-qrcode-svg';
 import { getAllUsers, deleteUserProfile, UserProfile } from '../services/users';
 import { colors } from '../theme/colors';
@@ -51,7 +51,12 @@ export default function AdminScreen() {
     }
   }, [search]);
 
-  useEffect(() => { load().finally(() => setLoading(false)); }, []);
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      load().finally(() => setLoading(false));
+    }, [load])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);

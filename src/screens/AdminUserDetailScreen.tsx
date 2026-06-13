@@ -64,10 +64,8 @@ export default function AdminUserDetailScreen() {
         const placeholderId = `manual_${Date.now()}`;
         await createUserProfile(placeholderId, email.trim(), displayName.trim());
         await updateUserProfile(placeholderId, { phone, membershipType, role, isActive });
-        notify('Member added', 'Profile created. They can sign in with this email once they register.');
       } else {
         await updateUserProfile(existing!.uid, { displayName: displayName.trim(), phone, membershipType, role, isActive });
-        notify('Saved', 'Member profile updated.');
       }
       navigation.goBack();
     } catch (err: any) {

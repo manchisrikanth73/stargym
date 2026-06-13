@@ -11,12 +11,30 @@ import { createUserProfile, getUserProfile } from './users';
 import { sendNewMemberNotification } from './email';
 
 export const signUp = async (email: string, password: string, displayName: string) => {
-  const cred = await createUserWithEmailAndPassword(auth, email, password);
-  await updateProfile(cred.user, { displayName });
-  await createUserProfile(cred.user.uid, email, displayName);
-  // Non-blocking — don't fail signup if email fails
-  sendNewMemberNotification(displayName, email).catch(() => {});
-  return cred;
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(cred.user, { displayName });
+    await createUserProfile(cred.user.uid, email, displayName);
+    sendNewMemberNotification(displayName, email).catch(err => console.error('[EmailJS]', err));
+    return cred;
+  } catch (err: any) {
+    // Auth account exists but Firestore profile was deleted by admin — re-create the profile
+    if (err.code === 'auth/email-already-in-use') {
+      try {
+        const signInCred = await signInWithEmailAndPassword(auth, email, password);
+        const profile = await getUserProfile(signInCred.user.uid);
+        if (!profile) {
+          await updateProfile(signInCred.user, { displayName });
+          await createUserProfile(signInCred.user.uid, email, displayName);
+          sendNewMemberNotification(displayName, email).catch(err2 => console.error('[EmailJS]', err2));
+          return signInCred;
+        }
+      } catch {
+        // Sign-in failed with these credentials — email is genuinely taken
+      }
+    }
+    throw err;
+  }
 };
 
 export const signIn = (email: string, password: string) =>

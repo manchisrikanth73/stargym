@@ -4,6 +4,8 @@ const EMAILJS_SERVICE_ID  = 'service_dev3sz3';
 const EMAILJS_TEMPLATE_ID = 'template_13ikyn4';
 const EMAILJS_PUBLIC_KEY  = '4FwDMW4Cfr04zOO2R';
 
+emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+
 export const ADMIN_EMAIL = 'manchisrikanth73@gmail.com';
 
 export async function sendNewMemberNotification(memberName: string, memberEmail: string) {
@@ -16,6 +18,5 @@ export async function sendNewMemberNotification(memberName: string, memberEmail:
       member_email: memberEmail,
       signup_date:  new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
     },
-    EMAILJS_PUBLIC_KEY,
   );
 }
