@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   Switch,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -41,9 +42,18 @@ export default function AdminUserDetailScreen() {
   const [saving, setSaving] = useState(false);
 
   const validate = () => {
-    if (!displayName.trim()) { Alert.alert('Required', 'Please enter the member\'s name.'); return false; }
-    if (isNew && !email.trim()) { Alert.alert('Required', 'Please enter the member\'s email.'); return false; }
+    const warn = (msg: string) => Platform.OS === 'web' ? (window as any).alert(msg) : Alert.alert('Required', msg);
+    if (!displayName.trim()) { warn("Please enter the member's name."); return false; }
+    if (isNew && !email.trim()) { warn("Please enter the member's email."); return false; }
     return true;
+  };
+
+  const notify = (title: string, msg: string) => {
+    if (Platform.OS === 'web') {
+      (window as any).alert(`${title}\n\n${msg}`);
+    } else {
+      Alert.alert(title, msg);
+    }
   };
 
   const handleSave = async () => {
@@ -51,18 +61,17 @@ export default function AdminUserDetailScreen() {
     setSaving(true);
     try {
       if (isNew) {
-        // Create placeholder profile (member signs up themselves later)
         const placeholderId = `manual_${Date.now()}`;
         await createUserProfile(placeholderId, email.trim(), displayName.trim());
         await updateUserProfile(placeholderId, { phone, membershipType, role, isActive });
-        Alert.alert('Member added', 'Profile created. They can sign in with this email once they register.');
+        notify('Member added', 'Profile created. They can sign in with this email once they register.');
       } else {
         await updateUserProfile(existing!.uid, { displayName: displayName.trim(), phone, membershipType, role, isActive });
-        Alert.alert('Saved', 'Member profile updated.');
+        notify('Saved', 'Member profile updated.');
       }
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert('Error', err.message ?? 'Failed to save. Please try again.');
+      notify('Error', err.message ?? 'Failed to save. Please try again.');
     } finally {
       setSaving(false);
     }

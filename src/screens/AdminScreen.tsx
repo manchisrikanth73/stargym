@@ -86,15 +86,12 @@ export default function AdminScreen() {
   const confirmDelete = (user: UserProfile) => {
     if (Platform.OS === 'web') {
       const name = user.displayName || user.email;
-      if ((window as any).confirm(`Remove ${name} from the members list?`)) {
-        setConfirmUser(user);
-        // immediately trigger delete on web
-        setDeleting(true);
-        deleteUserProfile(user.uid)
-          .then(() => load())
-          .catch((err: any) => Alert.alert('Delete failed', err.message ?? 'Could not remove member.'))
-          .finally(() => { setDeleting(false); setConfirmUser(null); });
-      }
+      if (!(window as any).confirm(`Remove "${name}" from the members list?\n\nThis cannot be undone.`)) return;
+      setDeleting(true);
+      deleteUserProfile(user.uid)
+        .then(() => load())
+        .catch((err: any) => (window as any).alert('Delete failed: ' + (err.message ?? 'Unknown error')))
+        .finally(() => setDeleting(false));
     } else {
       setConfirmUser(user);
     }
