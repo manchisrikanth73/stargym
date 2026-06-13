@@ -14,8 +14,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
+import QRCode from 'react-native-qrcode-svg';
 import { getAllUsers, deleteUserProfile, UserProfile } from '../services/users';
 import { colors } from '../theme/colors';
+import { GYM_CHECKIN_CODE } from '../config';
 
 const MEMBERSHIP_COLOR: Record<string, string> = {
   vip: '#FFD700',
@@ -32,6 +34,7 @@ export default function AdminScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmUser, setConfirmUser] = useState<UserProfile | null>(null);
+  const [showGymQR, setShowGymQR] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -107,12 +110,17 @@ export default function AdminScreen() {
           <Ionicons name="menu" size={28} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.heading}>Members</Text>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => navigation.navigate('AdminUserDetail', { user: null })}
-        >
-          <Ionicons name="person-add" size={20} color="#000" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TouchableOpacity style={styles.qrBtn} onPress={() => setShowGymQR(true)}>
+            <Ionicons name="qr-code-outline" size={20} color={colors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => navigation.navigate('AdminUserDetail', { user: null })}
+          >
+            <Ionicons name="person-add" size={20} color="#000" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Stats */}
@@ -199,6 +207,25 @@ export default function AdminScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Gym QR code modal */}
+      <Modal visible={showGymQR} transparent animationType="fade">
+        <View style={styles.overlay}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>Gym Check-In QR Code</Text>
+            <Text style={[styles.modalBody, { marginBottom: 20 }]}>
+              Print this and display it at the gym entrance. Members scan it to check in.
+            </Text>
+            <View style={styles.gymQrWrap}>
+              <QRCode value={GYM_CHECKIN_CODE} size={200} color="#000" backgroundColor="#fff" ecl="H" />
+            </View>
+            <Text style={styles.gymQrCode}>{GYM_CHECKIN_CODE}</Text>
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowGymQR(false)}>
+              <Text style={styles.cancelBtnText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -262,6 +289,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingTop: 54, paddingBottom: 12,
   },
   heading: { color: colors.text, fontSize: 20, fontWeight: '800' },
+  qrBtn: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
   addBtn: {
     width: 38, height: 38, borderRadius: 19,
     backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
@@ -336,4 +368,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.error, alignItems: 'center', justifyContent: 'center',
   },
   deleteBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  gymQrWrap: {
+    backgroundColor: '#fff', padding: 20, borderRadius: 16,
+    marginBottom: 14, alignItems: 'center',
+  },
+  gymQrCode: { color: colors.textMuted, fontSize: 11, letterSpacing: 2, marginBottom: 20 },
 });

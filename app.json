@@ -8,7 +8,10 @@
     "userInterfaceStyle": "dark",
     "scheme": "stargym",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Scan the gym entrance QR code to check in"
+      }
     },
     "android": {
       "adaptiveIcon": {

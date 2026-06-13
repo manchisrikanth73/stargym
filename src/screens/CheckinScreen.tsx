@@ -1,55 +1,28 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-  Animated,
-  Easing,
-  Alert,
-  ScrollView,
+  View, Text, StyleSheet, TouchableOpacity,
+  ActivityIndicator, Alert,
 } from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import dayjs from 'dayjs';
-import { auth } from '../services/firebase';
 import { checkIn } from '../services/attendance';
 import { colors } from '../theme/colors';
+import { GYM_CHECKIN_CODE } from '../config';
 
 export default function CheckinScreen() {
   const navigation = useNavigation();
+  const [scanned, setScanned] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [done, setDone] = useState(false);
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-
-  const user = auth.currentUser;
-  const displayName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Athlete';
-  const uid = user?.uid ?? 'unknown';
-  const today = dayjs().format('YYYY-MM-DD');
-  const qrData = `stargym:checkin:${uid}:${today}`;
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.06, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 0.94, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [pulseAnim]);
+  const [permission, requestPermission] = useCameraPermissions();
 
   const handleConfirm = async () => {
     setConfirming(true);
     try {
       const success = await checkIn();
-      if (success) {
-        setDone(true);
-      } else {
-        Alert.alert('Already checked in', 'You have already checked in today!');
-      }
+      if (success) setDone(true);
+      else Alert.alert('Already checked in', 'You have already checked in today!');
     } catch {
       Alert.alert('Error', 'Check-in failed. Please try again.');
     } finally {
@@ -57,52 +30,75 @@ export default function CheckinScreen() {
     }
   };
 
+  const handleBarCodeScanned = async ({ data }: { data: string }) => {
+    if (scanned || confirming) return;
+    setScanned(true);
+    if (data === GYM_CHECKIN_CODE) {
+      await handleConfirm();
+    } else {
+      Alert.alert('Invalid code', 'This is not the StarGym check-in code. Try again.', [
+        { text: 'OK', onPress: () => setScanned(false) },
+      ]);
+    }
+  };
+
   if (done) return <SuccessView onBack={() => navigation.goBack()} />;
 
+  if (!permission) return <View style={styles.root} />;
+
+  if (!permission.granted) {
+    return (
+      <View style={[styles.root, styles.centered]}>
+        <Ionicons name="camera-outline" size={64} color={colors.textMuted} />
+        <Text style={styles.permText}>Camera access needed to scan the check-in code</Text>
+        <TouchableOpacity style={styles.btn} onPress={requestPermission}>
+          <Text style={styles.btnText}>Allow Camera</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.container}>
+    <View style={styles.root}>
       <View style={styles.headerRow}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.heading}>Check In</Text>
+        <Text style={styles.heading}>Scan to Check In</Text>
         <View style={{ width: 24 }} />
       </View>
 
-      <Text style={styles.dateText}>{dayjs().format('dddd, MMMM D, YYYY')}</Text>
-      <Text style={styles.timeText}>{dayjs().format('HH:mm')}</Text>
+      <CameraView
+        style={styles.camera}
+        facing="back"
+        barcodeScannerSettings={{ barcodeTypes: ['qr', 'code128', 'ean13'] }}
+        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.scanFrame}>
+            <View style={[styles.corner, styles.cornerTL]} />
+            <View style={[styles.corner, styles.cornerTR]} />
+            <View style={[styles.corner, styles.cornerBL]} />
+            <View style={[styles.corner, styles.cornerBR]} />
+          </View>
+          <Text style={styles.scanHint}>Point at the gym entrance QR code</Text>
+          {confirming && <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: 20 }} />}
+        </View>
+      </CameraView>
 
-      {/* QR Code */}
-      <Animated.View style={[styles.qrCard, { transform: [{ scale: pulseAnim }] }]}>
-        <QRCode
-          value={qrData}
-          size={210}
-          color="#000"
-          backgroundColor="#fff"
-          ecl="H"
-        />
-      </Animated.View>
-
-      <Text style={styles.nameText}>{displayName.toUpperCase()}</Text>
-      <Text style={styles.hintText}>Show this QR code at the front desk</Text>
-
-      <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirm} disabled={confirming}>
-        {confirming ? (
-          <ActivityIndicator color="#000" />
-        ) : (
-          <>
-            <Ionicons name="checkmark-circle-outline" size={22} color="#000" />
-            <Text style={styles.confirmText}>Confirm Check-In</Text>
-          </>
-        )}
-      </TouchableOpacity>
-    </ScrollView>
+      {scanned && !confirming && (
+        <TouchableOpacity style={styles.rescanBtn} onPress={() => setScanned(false)}>
+          <Ionicons name="refresh-outline" size={18} color="#000" />
+          <Text style={styles.rescanText}>Tap to scan again</Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 }
 
 function SuccessView({ onBack }: { onBack: () => void }) {
   return (
-    <View style={[styles.root, styles.successContainer]}>
+    <View style={styles.successRoot}>
       <View style={styles.successCircle}>
         <Ionicons name="checkmark" size={60} color="#fff" />
       </View>
@@ -110,71 +106,65 @@ function SuccessView({ onBack }: { onBack: () => void }) {
       <Text style={styles.successSub}>
         Your attendance for today has been{'\n'}marked on the calendar.
       </Text>
-      <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-        <Text style={styles.backBtnText}>Back to Dashboard</Text>
+      <TouchableOpacity style={styles.btn} onPress={onBack}>
+        <Text style={styles.btnText}>Back to Dashboard</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
+const CORNER = 28;
+
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  container: { alignItems: 'center', padding: 24, paddingBottom: 40 },
+  root: { flex: 1, backgroundColor: '#000' },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingTop: 48,
-    marginBottom: 24,
+    position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingTop: 54, paddingBottom: 16,
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
-  heading: { color: colors.text, fontSize: 18, fontWeight: '700' },
-  dateText: { color: colors.textMuted, fontSize: 14, marginBottom: 4 },
-  timeText: { color: colors.primary, fontSize: 42, fontWeight: '900', letterSpacing: 4, marginBottom: 32 },
-  qrCard: {
-    backgroundColor: '#fff',
-    padding: 22,
-    borderRadius: 24,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.55,
-    shadowRadius: 28,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
+  heading: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  camera: { flex: 1 },
+  overlay: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  scanFrame: {
+    width: 240, height: 240, position: 'relative',
     marginBottom: 28,
   },
-  nameText: { color: colors.secondary, fontSize: 18, fontWeight: '900', letterSpacing: 2, marginBottom: 6 },
-  hintText: { color: colors.textMuted, fontSize: 13, marginBottom: 36 },
-  confirmBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    height: 56,
-    width: '100%',
-    backgroundColor: colors.secondary,
-    borderRadius: 16,
+  corner: {
+    position: 'absolute', width: CORNER, height: CORNER,
+    borderColor: colors.primary, borderWidth: 3,
   },
-  confirmText: { color: '#000', fontSize: 16, fontWeight: '700' },
-  // Success
-  successContainer: { alignItems: 'center', justifyContent: 'center', padding: 32 },
+  cornerTL: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0 },
+  cornerTR: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0 },
+  cornerBL: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0 },
+  cornerBR: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0 },
+  scanHint: { color: '#fff', fontSize: 14, fontWeight: '600', textAlign: 'center' },
+  rescanBtn: {
+    position: 'absolute', bottom: 48, alignSelf: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 14,
+    borderRadius: 14,
+  },
+  rescanText: { color: '#000', fontWeight: '700', fontSize: 15 },
+  centered: { alignItems: 'center', justifyContent: 'center', padding: 32 },
+  permText: { color: colors.textMuted, fontSize: 15, textAlign: 'center', marginVertical: 20 },
+  btn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 10, height: 54, paddingHorizontal: 32,
+    backgroundColor: colors.primary, borderRadius: 14,
+  },
+  btnText: { color: '#000', fontSize: 16, fontWeight: '700' },
+  successRoot: {
+    flex: 1, backgroundColor: colors.bg,
+    alignItems: 'center', justifyContent: 'center', padding: 32,
+  },
   successCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 32,
+    width: 120, height: 120, borderRadius: 60, backgroundColor: colors.primary,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 32,
   },
   successTitle: { color: colors.text, fontSize: 26, fontWeight: '900', marginBottom: 12 },
   successSub: { color: colors.textMuted, fontSize: 15, textAlign: 'center', lineHeight: 24, marginBottom: 48 },
-  backBtn: {
-    width: '100%',
-    height: 54,
-    backgroundColor: colors.primary,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
 });
