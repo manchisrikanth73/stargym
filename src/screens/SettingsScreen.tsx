@@ -196,6 +196,11 @@ export default function SettingsScreen() {
               <View style={styles.card}>
                 <View style={styles.priceHeader}>
                   <Text style={styles.priceHeaderLabel}>Per Month</Text>
+                  <View style={styles.priceColLabel}>
+                    <Ionicons name="barbell-outline" size={13} color={colors.textMuted} />
+                    <Text style={styles.priceHeaderLabel}>Workouts</Text>
+                    {savingAccess && <ActivityIndicator size="small" color={colors.primary} />}
+                  </View>
                   {!editingPrices ? (
                     <TouchableOpacity onPress={() => setEditingPrices(true)}>
                       <Text style={styles.editLink}>Edit</Text>
@@ -243,31 +248,6 @@ export default function SettingsScreen() {
                           {prices[key] > 0 ? `$${prices[key]}` : '—'}
                         </Text>
                       )}
-                    </View>
-                  </React.Fragment>
-                ))}
-              </View>
-            </>
-          )}
-
-          {/* Workout Access — admin only */}
-          {isAdmin && (
-            <>
-              <Text style={[styles.sectionLabel, { marginTop: 4 }]}>Workout Access</Text>
-              <View style={styles.card}>
-                <View style={styles.accessHeader}>
-                  <Ionicons name="barbell-outline" size={16} color={colors.textMuted} />
-                  <Text style={styles.priceHeaderLabel}>Allow access by plan</Text>
-                  {savingAccess && <ActivityIndicator size="small" color={colors.primary} />}
-                </View>
-                {MEMBERSHIP_OPTIONS.map(({ key, label, color }, i) => (
-                  <React.Fragment key={key}>
-                    {i > 0 && <View style={styles.fieldDivider} />}
-                    <View style={styles.accessRow}>
-                      <View style={[styles.membershipDot, { backgroundColor: `${color}22` }]}>
-                        <Text style={[styles.membershipDotText, { color }]}>{label[0]}</Text>
-                      </View>
-                      <Text style={styles.priceLabel}>{label}</Text>
                       <Switch
                         value={workoutAccess[key]}
                         onValueChange={v => handleToggleAccess(key, v)}
@@ -370,10 +350,11 @@ const styles = StyleSheet.create({
   saveBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
 
   priceHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 16, paddingVertical: 14,
     borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
   },
+  priceColLabel: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 'auto' },
   priceHeaderLabel: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
   editLink: { color: colors.primary, fontSize: 13, fontWeight: '700' },
   priceActions: { flexDirection: 'row', gap: 16, alignItems: 'center' },
