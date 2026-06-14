@@ -9,7 +9,6 @@ import {
   Platform,
   ActivityIndicator,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { signIn, signUp, resetPassword } from '../services/auth';
@@ -22,14 +21,19 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [emailInUse, setEmailInUse] = useState(false);
+
+  const clearError = () => { setError(null); setEmailInUse(false); };
 
   const handleSubmit = async () => {
+    clearError();
     if (!email || !password) {
-      Alert.alert('Missing fields', 'Please enter your email and password.');
+      setError('Please enter your email and password.');
       return;
     }
     if (isSignUp && !name.trim()) {
-      Alert.alert('Missing name', 'Please enter your full name.');
+      setError('Please enter your full name.');
       return;
     }
     setLoading(true);
@@ -40,32 +44,45 @@ export default function LoginScreen() {
         await signIn(email.trim(), password);
       }
     } catch (err: any) {
-      Alert.alert('Error', friendlyError(err.code));
+      if (err.code === 'auth/email-already-in-use') {
+        setEmailInUse(true);
+      } else {
+        setError(friendlyError(err.code));
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleForgotPassword = async () => {
+    clearError();
     if (!email.trim()) {
-      Alert.alert('Enter email', 'Type your email address above first, then tap Forgot Password.');
+      setError('Enter your email address above first, then tap Forgot Password.');
       return;
     }
     try {
       await resetPassword(email.trim());
-      Alert.alert('Email sent', `A password reset link has been sent to ${email.trim()}. Check your inbox and sign in with the new password.`);
+      setError(null);
+      setEmailInUse(false);
+      if (Platform.OS === 'web') {
+        (window as any).alert(`Password reset link sent to ${email.trim()}. Check your inbox.`);
+      }
     } catch (err: any) {
-      Alert.alert('Error', friendlyError(err.code));
+      setError(friendlyError(err.code));
     }
+  };
+
+  const switchToSignIn = () => {
+    setIsSignUp(false);
+    setName('');
+    clearError();
   };
 
   const friendlyError = (code: string) => {
     if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential')
       return 'Invalid email or password.';
-    if (code === 'auth/email-already-in-use')
-      return 'This email is already registered. Log in with your previous password, or tap "Forgot Password?" to reset it.';
     if (code === 'auth/weak-password') return 'Password must be at least 6 characters.';
-    if (code === 'auth/invalid-email') return 'Please enter a valid email.';
+    if (code === 'auth/invalid-email') return 'Please enter a valid email address.';
     return 'Something went wrong. Please try again.';
   };
 
@@ -98,14 +115,14 @@ export default function LoginScreen() {
                 placeholderTextColor={colors.textMuted}
                 autoCapitalize="words"
                 value={name}
-                onChangeText={setName}
+                onChangeText={t => { setName(t); clearError(); }}
               />
             </View>
           )}
 
           {/* Email */}
-          <View style={styles.inputWrap}>
-            <Ionicons name="mail-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+          <View style={[styles.inputWrap, emailInUse && styles.inputError]}>
+            <Ionicons name="mail-outline" size={18} color={emailInUse ? colors.error : colors.textMuted} style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Email"
@@ -113,7 +130,7 @@ export default function LoginScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={t => { setEmail(t); clearError(); }}
             />
           </View>
 
@@ -126,7 +143,7 @@ export default function LoginScreen() {
               placeholderTextColor={colors.textMuted}
               secureTextEntry={!showPass}
               value={password}
-              onChangeText={setPassword}
+              onChangeText={t => { setPassword(t); clearError(); }}
             />
             <TouchableOpacity onPress={() => setShowPass(v => !v)} style={styles.eyeBtn}>
               <Ionicons name={showPass ? 'eye-off-outline' : 'eye-outline'} size={18} color={colors.textMuted} />
@@ -140,6 +157,36 @@ export default function LoginScreen() {
             </TouchableOpacity>
           )}
 
+          {/* Email already in use banner */}
+          {emailInUse && (
+            <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle-outline" size={18} color={colors.error} style={{ marginTop: 1 }} />
+              <View style={{ flex: 1, gap: 8 }}>
+                <Text style={styles.errorBannerText}>
+                  This email is already registered.
+                </Text>
+                <View style={styles.errorActions}>
+                  <TouchableOpacity style={styles.errorActionBtn} onPress={switchToSignIn}>
+                    <Ionicons name="log-in-outline" size={14} color="#000" />
+                    <Text style={styles.errorActionBtnText}>Sign In</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.errorActionBtn, styles.errorActionBtnSecondary]} onPress={handleForgotPassword}>
+                    <Ionicons name="key-outline" size={14} color={colors.error} />
+                    <Text style={[styles.errorActionBtnText, { color: colors.error }]}>Forgot Password?</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Generic error */}
+          {error && (
+            <View style={styles.errorInline}>
+              <Ionicons name="warning-outline" size={15} color={colors.error} />
+              <Text style={styles.errorInlineText}>{error}</Text>
+            </View>
+          )}
+
           {/* Submit */}
           <TouchableOpacity style={styles.btn} onPress={handleSubmit} disabled={loading}>
             {loading ? (
@@ -150,7 +197,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           {/* Toggle */}
-          <TouchableOpacity onPress={() => { setIsSignUp(v => !v); setName(''); }} style={styles.toggleBtn}>
+          <TouchableOpacity onPress={() => { setIsSignUp(v => !v); setName(''); clearError(); }} style={styles.toggleBtn}>
             <Text style={styles.toggleText}>
               {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
               <Text style={styles.toggleLink}>{isSignUp ? 'Log In' : 'Sign Up'}</Text>
@@ -194,6 +241,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 52,
   },
+  inputError: {
+    borderColor: colors.error,
+  },
   inputIcon: { marginRight: 10 },
   input: { flex: 1, color: colors.text, fontSize: 15 },
   eyeBtn: { padding: 4 },
@@ -211,4 +261,38 @@ const styles = StyleSheet.create({
   toggleLink: { color: colors.primary, fontWeight: '700' },
   forgotBtn: { alignSelf: 'flex-end', marginBottom: 8 },
   forgotText: { color: colors.textMuted, fontSize: 13 },
+  errorBanner: {
+    flexDirection: 'row',
+    gap: 10,
+    backgroundColor: `${colors.error}18`,
+    borderWidth: 1,
+    borderColor: `${colors.error}44`,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 14,
+  },
+  errorBannerText: { color: colors.error, fontSize: 13, lineHeight: 18 },
+  errorActions: { flexDirection: 'row', gap: 10 },
+  errorActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  errorActionBtnSecondary: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: `${colors.error}66`,
+  },
+  errorActionBtnText: { color: '#000', fontSize: 12, fontWeight: '700' },
+  errorInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginBottom: 12,
+  },
+  errorInlineText: { color: colors.error, fontSize: 13, flex: 1 },
 });
