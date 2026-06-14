@@ -194,30 +194,13 @@ export default function SettingsScreen() {
             <>
               <Text style={[styles.sectionLabel, { marginTop: 28 }]}>Membership Config</Text>
               <View style={styles.card}>
-                {/* Column headers */}
-                <View style={styles.priceHeader}>
-                  <Text style={[styles.colHeader, { flex: 1 }]}>Plan Type</Text>
-                  <View style={styles.priceColLabel}>
+                {/* Column header row */}
+                <View style={[styles.gridRow, styles.gridHeaderRow]}>
+                  <Text style={[styles.colHeader, styles.col1]}>Plan Type</Text>
+                  <View style={[styles.col2, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
                     <Text style={styles.colHeader}>Plan Price</Text>
-                    {!editingPrices ? (
-                      <TouchableOpacity onPress={() => setEditingPrices(true)}>
-                        <Text style={styles.editLink}>Edit</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <View style={styles.priceActions}>
-                        <TouchableOpacity onPress={handleCancelPrices} disabled={savingPrices}>
-                          <Text style={styles.cancelLink}>Cancel</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={handleSavePrices} disabled={savingPrices}>
-                          {savingPrices
-                            ? <ActivityIndicator size="small" color={colors.secondary} />
-                            : <Text style={styles.saveLink}>Save</Text>
-                          }
-                        </TouchableOpacity>
-                      </View>
-                    )}
                   </View>
-                  <View style={styles.workoutColHeader}>
+                  <View style={[styles.col3, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }]}>
                     <Text style={styles.colHeader}>Workout</Text>
                     {savingAccess && <ActivityIndicator size="small" color={colors.primary} />}
                   </View>
@@ -226,38 +209,70 @@ export default function SettingsScreen() {
                 {MEMBERSHIP_OPTIONS.map(({ key, label, color }, i) => (
                   <React.Fragment key={key}>
                     {i > 0 && <View style={styles.fieldDivider} />}
-                    <View style={styles.priceRow}>
-                      <View style={[styles.membershipDot, { backgroundColor: `${color}22` }]}>
-                        <Text style={[styles.membershipDotText, { color }]}>{label[0]}</Text>
-                      </View>
-                      <Text style={styles.priceLabel}>{label}</Text>
-                      {editingPrices ? (
-                        <View style={styles.priceInputWrap}>
-                          <Text style={styles.currencySymbol}>$</Text>
-                          <TextInput
-                            style={styles.priceInput}
-                            value={pricesDraft[key] === 0 ? '' : String(pricesDraft[key])}
-                            onChangeText={v => {
-                              const n = parseFloat(v);
-                              setPricesDraft(p => ({ ...p, [key]: isNaN(n) ? 0 : n }));
-                            }}
-                            keyboardType="decimal-pad"
-                            placeholder="0"
-                            placeholderTextColor={colors.textDim}
-                          />
+                    <View style={styles.gridRow}>
+                      {/* Col 1 – Plan Type */}
+                      <View style={[styles.col1, { flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
+                        <View style={[styles.membershipDot, { backgroundColor: `${color}22` }]}>
+                          <Text style={[styles.membershipDotText, { color }]}>{label[0]}</Text>
                         </View>
-                      ) : (
-                        <Text style={styles.priceValue}>
-                          {prices[key] > 0 ? `$${prices[key]}` : '—'}
-                        </Text>
-                      )}
-                      <Switch
-                        value={workoutAccess[key]}
-                        onValueChange={v => handleToggleAccess(key, v)}
-                        trackColor={{ true: color, false: '#333' }}
-                        thumbColor="#fff"
-                        disabled={savingAccess}
-                      />
+                        <Text style={styles.planName}>{label}</Text>
+                      </View>
+
+                      {/* Col 2 – Plan Price + Edit / Save / Cancel */}
+                      <View style={[styles.col2, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+                        {editingPrices ? (
+                          <>
+                            <View style={styles.priceInputWrap}>
+                              <Text style={styles.currencySymbol}>$</Text>
+                              <TextInput
+                                style={styles.priceInput}
+                                value={pricesDraft[key] === 0 ? '' : String(pricesDraft[key])}
+                                onChangeText={v => {
+                                  const n = parseFloat(v);
+                                  setPricesDraft(p => ({ ...p, [key]: isNaN(n) ? 0 : n }));
+                                }}
+                                keyboardType="decimal-pad"
+                                placeholder="0"
+                                placeholderTextColor={colors.textDim}
+                              />
+                            </View>
+                            {i === 0 && (
+                              <>
+                                <TouchableOpacity onPress={handleSavePrices} disabled={savingPrices}>
+                                  {savingPrices
+                                    ? <ActivityIndicator size="small" color={colors.secondary} />
+                                    : <Text style={styles.saveLink}>Save</Text>}
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={handleCancelPrices} disabled={savingPrices}>
+                                  <Text style={styles.cancelLink}>Cancel</Text>
+                                </TouchableOpacity>
+                              </>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <Text style={styles.priceValue}>
+                              {prices[key] > 0 ? `$${prices[key]}` : '—'}
+                            </Text>
+                            {i === 0 && (
+                              <TouchableOpacity onPress={() => setEditingPrices(true)}>
+                                <Text style={styles.editLink}>Edit</Text>
+                              </TouchableOpacity>
+                            )}
+                          </>
+                        )}
+                      </View>
+
+                      {/* Col 3 – Workout toggle */}
+                      <View style={[styles.col3, { alignItems: 'center' }]}>
+                        <Switch
+                          value={workoutAccess[key]}
+                          onValueChange={v => handleToggleAccess(key, v)}
+                          trackColor={{ true: color, false: '#333' }}
+                          thumbColor="#fff"
+                          disabled={savingAccess}
+                        />
+                      </View>
                     </View>
                   </React.Fragment>
                 ))}
@@ -365,6 +380,18 @@ const styles = StyleSheet.create({
   priceActions: { flexDirection: 'row', gap: 16, alignItems: 'center' },
   cancelLink: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
   saveLink: { color: colors.secondary, fontSize: 13, fontWeight: '700' },
+  gridRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingVertical: 12,
+  },
+  gridHeaderRow: {
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
+    paddingVertical: 10,
+  },
+  col1: { flex: 2 },
+  col2: { flex: 2 },
+  col3: { flex: 1 },
+  planName: { color: colors.text, fontSize: 14, fontWeight: '600' },
   priceRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingVertical: 14, gap: 12,
