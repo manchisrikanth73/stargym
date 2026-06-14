@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { createUserProfile, updateUserProfile, UserProfile, MembershipType } from '../services/users';
+import DateInput from '../components/DateInput';
 import { colors } from '../theme/colors';
 
 type RouteParams = {
@@ -143,21 +144,16 @@ export default function AdminUserDetailScreen() {
 
       {/* Activation Dates */}
       <View style={styles.section}>
-        <Label>Activation Start Date *</Label>
-        <Field
-          icon="calendar-outline"
-          placeholder="YYYY-MM-DD"
+        <DateInput
+          label="Activation Start Date"
           value={activationStartDate}
-          onChangeText={setActivationStartDate}
-          keyboardType="numbers-and-punctuation"
+          onChange={setActivationStartDate}
+          required
         />
-        <Label>Activation End Date</Label>
-        <Field
-          icon="calendar-outline"
-          placeholder="YYYY-MM-DD  (leave blank = open-ended)"
+        <DateInput
+          label="Activation End Date (blank = open-ended)"
           value={activationEndDate}
-          onChangeText={setActivationEndDate}
-          keyboardType="numbers-and-punctuation"
+          onChange={setActivationEndDate}
         />
       </View>
 
