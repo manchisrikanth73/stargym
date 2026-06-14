@@ -12,6 +12,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { withRetry } from '../utils/retry';
 
 export type MemberRole = 'admin' | 'member';
 export type MembershipType = 'basic' | 'premium' | 'vip';
@@ -48,9 +49,11 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 }
 
 export async function getAllUsers(): Promise<UserProfile[]> {
-  const q = query(usersRef(), orderBy('joinedAt', 'desc'));
-  const snap = await getDocs(q);
-  return snap.docs.map(d => d.data() as UserProfile);
+  return withRetry('getAllUsers', async () => {
+    const q = query(usersRef(), orderBy('joinedAt', 'desc'));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => d.data() as UserProfile);
+  });
 }
 
 export async function updateUserProfile(uid: string, data: Partial<UserProfile>) {

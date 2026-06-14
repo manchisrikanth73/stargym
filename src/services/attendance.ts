@@ -11,6 +11,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
+import { withRetry } from '../utils/retry';
 import dayjs from 'dayjs';
 
 const uid = () => auth.currentUser!.uid;
@@ -18,17 +19,18 @@ const ref = () => collection(db, 'users', uid(), 'attendance');
 const dateKey = (d: Date) => dayjs(d).format('YYYY-MM-DD');
 
 export async function checkIn(): Promise<boolean> {
-  const key = dateKey(new Date());
-  const docRef = doc(ref(), key);
-  const snap = await getDoc(docRef);
-  if (snap.exists()) return false;
-
-  await setDoc(docRef, {
-    date: Timestamp.fromDate(new Date()),
-    checkedInAt: serverTimestamp(),
-    uid: uid(),
+  return withRetry('checkIn', async () => {
+    const key = dateKey(new Date());
+    const docRef = doc(ref(), key);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) return false;
+    await setDoc(docRef, {
+      date: Timestamp.fromDate(new Date()),
+      checkedInAt: serverTimestamp(),
+      uid: uid(),
+    });
+    return true;
   });
-  return true;
 }
 
 export async function isCheckedInToday(): Promise<boolean> {
@@ -37,11 +39,13 @@ export async function isCheckedInToday(): Promise<boolean> {
 }
 
 export async function getAttendanceDates(): Promise<string[]> {
-  const q = query(ref(), orderBy('date'));
-  const snap = await getDocs(q);
-  return snap.docs.map(d => {
-    const ts = d.data().date as Timestamp;
-    return dateKey(ts.toDate());
+  return withRetry('getAttendanceDates', async () => {
+    const q = query(ref(), orderBy('date'));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => {
+      const ts = d.data().date as Timestamp;
+      return dateKey(ts.toDate());
+    });
   });
 }
 
