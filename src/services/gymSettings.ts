@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 
 export type MembershipPrices = {
@@ -39,4 +39,15 @@ export async function getWorkoutAccess(): Promise<WorkoutAccess> {
 
 export async function setWorkoutAccess(access: WorkoutAccess): Promise<void> {
   await setDoc(settingsRef(), { workoutAccess: access }, { merge: true });
+}
+
+export function subscribeWorkoutAccess(cb: (access: WorkoutAccess) => void): () => void {
+  return onSnapshot(settingsRef(), snap => {
+    const d = snap.data()?.workoutAccess ?? {};
+    cb({
+      basic:   d.basic   ?? false,
+      premium: d.premium ?? true,
+      vip:     d.vip     ?? true,
+    });
+  });
 }

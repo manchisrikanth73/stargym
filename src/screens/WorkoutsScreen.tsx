@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, DrawerActions, useFocusEffect } from '@react-navigation/native';
 import { auth } from '../services/firebase';
 import { getUserProfile } from '../services/users';
-import { getWorkoutAccess } from '../services/gymSettings';
+import { subscribeWorkoutAccess } from '../services/gymSettings';
 import { colors } from '../theme/colors';
 
 const WORKOUTS = [
@@ -96,16 +96,19 @@ export default function WorkoutsScreen() {
   useFocusEffect(useCallback(() => {
     const uid = auth.currentUser?.uid;
     if (uid) {
-      Promise.all([getUserProfile(uid), getWorkoutAccess()]).then(([p, wa]) => {
-        const plan = p?.membershipType ?? 'basic';
-        setMembershipType(plan);
+      getUserProfile(uid).then(p => {
+        setMembershipType(p?.membershipType ?? 'basic');
         setLoadingProfile(false);
-        setIsLocked(!wa[plan as keyof typeof wa]);
       });
     } else {
       setLoadingProfile(false);
     }
-  }, []));
+    const unsubscribe = subscribeWorkoutAccess(wa => {
+      const plan = membershipType;
+      setIsLocked(!wa[plan as keyof typeof wa]);
+    });
+    return unsubscribe;
+  }, [membershipType]));
 
   const toggle = (id: string) => setExpanded(prev => prev === id ? null : id);
 

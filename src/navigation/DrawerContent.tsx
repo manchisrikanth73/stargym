@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { auth } from '../services/firebase';
 import { logOut } from '../services/auth';
 import { getUserProfile } from '../services/users';
-import { getWorkoutAccess, WorkoutAccess } from '../services/gymSettings';
+import { subscribeWorkoutAccess, WorkoutAccess } from '../services/gymSettings';
 import { colors } from '../theme/colors';
 
 type NavItem = { label: string; icon: string; screen: string | null; adminOnly?: boolean; memberOnly?: boolean };
@@ -36,13 +36,17 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
 
   useEffect(() => {
     if (user?.uid) {
-      Promise.all([getUserProfile(user.uid), getWorkoutAccess()]).then(([p, wa]) => {
+      getUserProfile(user.uid).then(p => {
         setIsAdmin(p?.role === 'admin');
         setMembershipType(p?.membershipType ?? 'basic');
-        setWorkoutAccess(wa);
       });
     }
   }, [user?.uid]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeWorkoutAccess(wa => setWorkoutAccess(wa));
+    return unsubscribe;
+  }, []);
 
   const visibleItems = NAV_ITEMS.filter(item => {
     if (item.adminOnly) return isAdmin;
