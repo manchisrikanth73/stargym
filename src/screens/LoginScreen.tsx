@@ -19,6 +19,8 @@ export default function LoginScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [dob, setDob] = useState('');
+  const [gender, setGender] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +41,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       if (isSignUp) {
-        await signUp(email.trim(), password, name.trim());
+        await signUp(email.trim(), password, name.trim(), dob.trim(), gender);
       } else {
         await signIn(email.trim(), password);
       }
@@ -79,6 +81,8 @@ export default function LoginScreen() {
   const switchToSignIn = () => {
     setIsSignUp(false);
     setName('');
+    setDob('');
+    setGender('');
     clearError();
   };
 
@@ -111,17 +115,41 @@ export default function LoginScreen() {
 
           {/* Name — sign up only */}
           {isSignUp && (
-            <View style={styles.inputWrap}>
-              <Ionicons name="person-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Full Name"
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="words"
-                value={name}
-                onChangeText={t => { setName(t); clearError(); }}
-              />
-            </View>
+            <>
+              <View style={styles.inputWrap}>
+                <Ionicons name="person-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Full Name"
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="words"
+                  value={name}
+                  onChangeText={t => { setName(t); clearError(); }}
+                />
+              </View>
+              <View style={styles.inputWrap}>
+                <Ionicons name="calendar-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Date of Birth (YYYY-MM-DD)"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="numbers-and-punctuation"
+                  value={dob}
+                  onChangeText={t => { setDob(t); clearError(); }}
+                />
+              </View>
+              <View style={styles.genderRow}>
+                {(['Male', 'Female', 'Other'] as const).map(g => (
+                  <TouchableOpacity
+                    key={g}
+                    style={[styles.genderBtn, gender === g && styles.genderBtnActive]}
+                    onPress={() => setGender(g)}
+                  >
+                    <Text style={[styles.genderBtnText, gender === g && styles.genderBtnTextActive]}>{g}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
           )}
 
           {/* Email */}
@@ -201,7 +229,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           {/* Toggle */}
-          <TouchableOpacity onPress={() => { setIsSignUp(v => !v); setName(''); clearError(); }} style={styles.toggleBtn}>
+          <TouchableOpacity onPress={() => { setIsSignUp(v => !v); setName(''); setDob(''); setGender(''); clearError(); }} style={styles.toggleBtn}>
             <Text style={styles.toggleText}>
               {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
               <Text style={styles.toggleLink}>{isSignUp ? 'Log In' : 'Sign Up'}</Text>
@@ -299,4 +327,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   errorInlineText: { color: colors.error, fontSize: 13, flex: 1 },
+  genderRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  genderBtn: {
+    flex: 1, height: 44, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  genderBtnActive: { backgroundColor: `${colors.primary}22`, borderColor: colors.primary },
+  genderBtnText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+  genderBtnTextActive: { color: colors.primary },
 });

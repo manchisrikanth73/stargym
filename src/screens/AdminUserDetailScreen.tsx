@@ -37,11 +37,15 @@ export default function AdminUserDetailScreen() {
   const [displayName, setDisplayName] = useState(existing?.displayName ?? '');
   const [email, setEmail] = useState(existing?.email ?? '');
   const [phone, setPhone] = useState(existing?.phone ?? '');
+  const [dob, setDob] = useState(existing?.dob ?? '');
+  const [gender, setGender] = useState(existing?.gender ?? '');
   const [membershipType, setMembershipType] = useState<MembershipType>(existing?.membershipType ?? 'basic');
   const [isActive, setIsActive] = useState(existing?.isActive ?? true);
   const [activationStartDate, setActivationStartDate] = useState(existing?.activationStartDate ?? '');
   const [activationEndDate, setActivationEndDate]     = useState(existing?.activationEndDate ?? '');
   const [saving, setSaving] = useState(false);
+
+  const GENDER_OPTIONS = ['Male', 'Female', 'Other'] as const;
 
   const validate = () => {
     const warn = (msg: string) => Platform.OS === 'web' ? (window as any).alert(msg) : Alert.alert('Required', msg);
@@ -72,12 +76,16 @@ export default function AdminUserDetailScreen() {
         activationStartDate: activationStartDate.trim() || null,
         activationEndDate: endDate,
       };
+      const personalData = {
+        dob: dob.trim() || null,
+        gender: gender || null,
+      };
       if (isNew) {
         const placeholderId = `manual_${Date.now()}`;
-        await createUserProfile(placeholderId, email.trim(), displayName.trim());
+        await createUserProfile(placeholderId, email.trim(), displayName.trim(), dob.trim(), gender);
         await updateUserProfile(placeholderId, { phone, membershipType, isActive: resolvedActive, ...dates });
       } else {
-        await updateUserProfile(existing!.uid, { displayName: displayName.trim(), email: email.trim(), phone, membershipType, isActive: resolvedActive, ...dates });
+        await updateUserProfile(existing!.uid, { displayName: displayName.trim(), email: email.trim(), phone, membershipType, isActive: resolvedActive, ...dates, ...personalData });
       }
       navigation.goBack();
     } catch (err: any) {
@@ -125,6 +133,22 @@ export default function AdminUserDetailScreen() {
 
         <Label>Phone</Label>
         <Field icon="call-outline" placeholder="+1 234 567 8900" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+
+        <Label>Date of Birth</Label>
+        <DateInput label="" value={dob} onChange={setDob} />
+
+        <Label>Gender</Label>
+        <View style={styles.optionRow}>
+          {GENDER_OPTIONS.map(g => (
+            <TouchableOpacity
+              key={g}
+              style={[styles.optionBtn, gender === g && { backgroundColor: `${colors.primary}22`, borderColor: colors.primary }]}
+              onPress={() => setGender(gender === g ? '' : g)}
+            >
+              <Text style={[styles.optionText, gender === g && { color: colors.primary }]}>{g}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       {/* Membership type */}

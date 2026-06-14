@@ -11,11 +11,11 @@ import { auth } from './firebase';
 import { createUserProfile, getUserProfile } from './users';
 import { sendNewMemberNotification } from './email';
 
-export const signUp = async (email: string, password: string, displayName: string) => {
+export const signUp = async (email: string, password: string, displayName: string, dob = '', gender = '') => {
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName });
-    await createUserProfile(cred.user.uid, email, displayName);
+    await createUserProfile(cred.user.uid, email, displayName, dob, gender);
     sendNewMemberNotification(displayName, email).catch(err => console.error('[EmailJS]', err));
     return cred;
   } catch (err: any) {
@@ -26,7 +26,7 @@ export const signUp = async (email: string, password: string, displayName: strin
         const profile = await getUserProfile(signInCred.user.uid);
         if (!profile) {
           await updateProfile(signInCred.user, { displayName });
-          await createUserProfile(signInCred.user.uid, email, displayName);
+          await createUserProfile(signInCred.user.uid, email, displayName, dob, gender);
           sendNewMemberNotification(displayName, email).catch(err2 => console.error('[EmailJS]', err2));
           return signInCred;
         }

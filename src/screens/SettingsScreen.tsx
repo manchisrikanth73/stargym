@@ -33,6 +33,8 @@ export default function SettingsScreen() {
   const [lastName, setLastName]   = useState('');
   const [email, setEmail]         = useState('');
   const [phone, setPhone]         = useState('');
+  const [dob, setDob]             = useState('');
+  const [gender, setGender]       = useState('');
   const [original, setOriginal] = useState({ firstName: '', lastName: '', email: '', phone: '' });
 
   const [prices, setPrices] = useState<MembershipPrices>({ basic: 0, premium: 0, vip: 0 });
@@ -51,6 +53,8 @@ export default function SettingsScreen() {
       const em = profile?.email ?? user.email ?? '';
       const ph = profile?.phone ?? '';
       setFirstName(fn); setLastName(ln); setEmail(em); setPhone(ph);
+      setDob(profile?.dob ?? '');
+      setGender(profile?.gender ?? '');
       setOriginal({ firstName: fn, lastName: ln, email: em, phone: ph });
       const admin = profile?.role === 'admin';
       setIsAdmin(admin);
@@ -160,6 +164,10 @@ export default function SettingsScreen() {
                 <Field label="Phone" value={phone} onChange={setPhone} placeholder="Phone number" keyboardType="phone-pad" />
               </>
             )}
+            <View style={styles.fieldDivider} />
+            <Field label="Date of Birth" value={dob || '—'} onChange={() => {}} editable={false} />
+            <View style={styles.fieldDivider} />
+            <Field label="Gender" value={gender || '—'} onChange={() => {}} editable={false} />
           </View>
 
           {/* Membership Config — admin only */}
@@ -284,7 +292,7 @@ export default function SettingsScreen() {
 }
 
 function Field({
-  label, value, onChange, placeholder, keyboardType, autoCapitalize,
+  label, value, onChange, placeholder, keyboardType, autoCapitalize, editable = true,
 }: {
   label: string;
   value: string;
@@ -292,9 +300,10 @@ function Field({
   placeholder?: string;
   keyboardType?: any;
   autoCapitalize?: any;
+  editable?: boolean;
 }) {
   return (
-    <View style={styles.field}>
+    <View style={[styles.field, !editable && { opacity: 0.6 }]}>
       <Text style={styles.fieldLabel}>{label}</Text>
       <TextInput
         style={styles.fieldInput}
@@ -305,6 +314,7 @@ function Field({
         keyboardType={keyboardType ?? 'default'}
         autoCapitalize={autoCapitalize ?? 'words'}
         returnKeyType="done"
+        editable={editable}
       />
     </View>
   );
