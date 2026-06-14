@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  Modal,
 } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { DrawerActions, useNavigation } from '@react-navigation/native';
 import dayjs from 'dayjs';
@@ -15,6 +17,7 @@ import { auth } from '../services/firebase';
 import { isCheckedInToday, getMonthlyCount } from '../services/attendance';
 import { getUserProfile, getAllUsers } from '../services/users';
 import { colors } from '../theme/colors';
+import { GYM_CHECKIN_CODE } from '../config';
 
 const QUOTES = [
   'Every rep counts. Every session matters.',
@@ -31,6 +34,7 @@ export default function DashboardScreen() {
   const [memberTotal, setMemberTotal] = useState(0);
   const [memberActive, setMemberActive] = useState(0);
   const [memberInactive, setMemberInactive] = useState(0);
+  const [showGymQR, setShowGymQR] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const user = auth.currentUser;
@@ -146,6 +150,20 @@ export default function DashboardScreen() {
         </View>
       )}
 
+      {/* Gym QR Card — admin only */}
+      {isAdmin && (
+        <TouchableOpacity style={styles.gymQrCard} onPress={() => setShowGymQR(true)} activeOpacity={0.8}>
+          <View style={styles.gymQrIcon}>
+            <Ionicons name="qr-code-outline" size={28} color={colors.secondary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.gymQrTitle}>Gym Check-In QR Code</Text>
+            <Text style={styles.gymQrSub}>Tap to view and print for the entrance</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+      )}
+
       {/* Check-In Card — members only */}
       {!isAdmin && (
         <TouchableOpacity
@@ -196,6 +214,23 @@ export default function DashboardScreen() {
       </View>
 
       <View style={{ height: 32 }} />
+
+      {/* Gym QR Modal */}
+      <Modal visible={showGymQR} transparent animationType="fade">
+        <View style={styles.overlay}>
+          <View style={styles.qrModal}>
+            <Text style={styles.qrModalTitle}>Gym Check-In QR Code</Text>
+            <Text style={styles.qrModalSub}>Print and display at the gym entrance</Text>
+            <View style={styles.qrBox}>
+              <QRCode value={GYM_CHECKIN_CODE} size={200} color="#000" backgroundColor="#fff" ecl="H" />
+            </View>
+            <Text style={styles.qrCodeText}>{GYM_CHECKIN_CODE}</Text>
+            <TouchableOpacity style={styles.qrCloseBtn} onPress={() => setShowGymQR(false)}>
+              <Text style={styles.qrCloseBtnText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -324,4 +359,35 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   motivText: { color: colors.textMuted, fontSize: 14, fontStyle: 'italic', lineHeight: 22 },
+  gymQrCard: {
+    marginHorizontal: 20, marginBottom: 20, padding: 18,
+    backgroundColor: colors.surface, borderRadius: 16,
+    borderWidth: 1, borderColor: `${colors.secondary}33`,
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+  },
+  gymQrIcon: {
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: `${colors.secondary}18`,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  gymQrTitle: { color: colors.text, fontSize: 15, fontWeight: '700' },
+  gymQrSub: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  overlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.75)',
+    alignItems: 'center', justifyContent: 'center', padding: 24,
+  },
+  qrModal: {
+    width: '100%', backgroundColor: colors.surface,
+    borderRadius: 20, padding: 24, alignItems: 'center',
+  },
+  qrModalTitle: { color: colors.text, fontSize: 18, fontWeight: '800', marginBottom: 6 },
+  qrModalSub: { color: colors.textMuted, fontSize: 13, marginBottom: 24 },
+  qrBox: { backgroundColor: '#fff', padding: 20, borderRadius: 16, marginBottom: 14 },
+  qrCodeText: { color: colors.textMuted, fontSize: 11, letterSpacing: 2, marginBottom: 24 },
+  qrCloseBtn: {
+    width: '100%', height: 48, borderRadius: 12,
+    borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  qrCloseBtnText: { color: colors.text, fontSize: 15, fontWeight: '600' },
 });

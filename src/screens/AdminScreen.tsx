@@ -112,17 +112,12 @@ export default function AdminScreen() {
           <Ionicons name="menu" size={28} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.heading}>Members</Text>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TouchableOpacity style={styles.qrBtn} onPress={() => setShowGymQR(true)}>
-            <Ionicons name="qr-code-outline" size={20} color={colors.text} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={() => navigation.navigate('AdminUserDetail', { user: null })}
-          >
-            <Ionicons name="person-add" size={20} color="#000" />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={styles.addBtn}
+          onPress={() => navigation.navigate('AdminUserDetail', { user: null })}
+        >
+          <Ionicons name="person-add" size={20} color="#000" />
+        </TouchableOpacity>
       </View>
 
       {/* Stats */}
