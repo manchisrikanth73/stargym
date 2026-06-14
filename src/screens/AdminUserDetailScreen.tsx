@@ -65,7 +65,7 @@ export default function AdminUserDetailScreen() {
         await createUserProfile(placeholderId, email.trim(), displayName.trim());
         await updateUserProfile(placeholderId, { phone, membershipType, role, isActive });
       } else {
-        await updateUserProfile(existing!.uid, { displayName: displayName.trim(), phone, membershipType, role, isActive });
+        await updateUserProfile(existing!.uid, { displayName: displayName.trim(), email: email.trim(), phone, membershipType, role, isActive });
       }
       navigation.goBack();
     } catch (err: any) {
@@ -108,7 +108,6 @@ export default function AdminUserDetailScreen() {
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
-          editable={isNew}
           autoCapitalize="none"
         />
 
