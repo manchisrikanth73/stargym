@@ -74,6 +74,12 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
         {visibleItems.map(item => {
           const isBasicLocked = !isAdmin && item.label === 'Workouts' && !workoutAccess[membershipType as keyof WorkoutAccess];
           const disabled = !item.screen || isBasicLocked;
+          const allowedPlans = (['premium', 'vip', 'basic'] as const)
+            .filter(p => workoutAccess[p])
+            .map(p => p.charAt(0).toUpperCase() + p.slice(1));
+          const accessHint = allowedPlans.length
+            ? allowedPlans.join(' & ') + ' only'
+            : 'No plans enabled';
           return (
             <TouchableOpacity
               key={item.label}
@@ -95,7 +101,7 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
               <View style={{ flex: 1 }}>
                 <Text style={[styles.itemLabel, disabled && { color: colors.textDim }]}>{item.label}</Text>
                 {isBasicLocked && (
-                  <Text style={styles.premiumHint}>Premium & VIP only</Text>
+                  <Text style={styles.premiumHint}>{accessHint}</Text>
                 )}
               </View>
               {isBasicLocked && (
