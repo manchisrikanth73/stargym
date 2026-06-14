@@ -22,7 +22,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Members', icon: 'people-outline', screen: 'Admin', adminOnly: true },
   { label: 'Workouts', icon: 'barbell-outline', screen: 'Workouts' },
   { label: 'Progress', icon: 'bar-chart-outline', screen: null },
-  { label: 'Settings', icon: 'settings-outline', screen: null },
+  { label: 'Settings', icon: 'settings-outline', screen: 'Settings' },
 ];
 
 export default function DrawerContent(props: DrawerContentComponentProps) {

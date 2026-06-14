@@ -7,6 +7,7 @@ import CalendarScreen from '../screens/CalendarScreen';
 import AdminScreen from '../screens/AdminScreen';
 import AdminUserDetailScreen from '../screens/AdminUserDetailScreen';
 import WorkoutsScreen from '../screens/WorkoutsScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 import DrawerContent from './DrawerContent';
 import { colors } from '../theme/colors';
 
@@ -27,6 +28,7 @@ function DrawerNav() {
       <Drawer.Screen name="Calendar" component={CalendarScreen} />
       <Drawer.Screen name="Admin" component={AdminScreen} />
       <Drawer.Screen name="Workouts" component={WorkoutsScreen} />
+      <Drawer.Screen name="Settings" component={SettingsScreen} />
     </Drawer.Navigator>
   );
 }
