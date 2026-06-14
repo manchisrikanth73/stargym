@@ -218,47 +218,31 @@ export default function SettingsScreen() {
                         <Text style={styles.planName}>{label}</Text>
                       </View>
 
-                      {/* Col 2 – Plan Price + Edit / Save / Cancel */}
+                      {/* Col 2 – Plan Price + Edit */}
                       <View style={[styles.col2, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
                         {editingPrices ? (
-                          <>
-                            <View style={styles.priceInputWrap}>
-                              <Text style={styles.currencySymbol}>$</Text>
-                              <TextInput
-                                style={styles.priceInput}
-                                value={pricesDraft[key] === 0 ? '' : String(pricesDraft[key])}
-                                onChangeText={v => {
-                                  const n = parseFloat(v);
-                                  setPricesDraft(p => ({ ...p, [key]: isNaN(n) ? 0 : n }));
-                                }}
-                                keyboardType="decimal-pad"
-                                placeholder="0"
-                                placeholderTextColor={colors.textDim}
-                              />
-                            </View>
-                            {i === 0 && (
-                              <>
-                                <TouchableOpacity onPress={handleSavePrices} disabled={savingPrices}>
-                                  {savingPrices
-                                    ? <ActivityIndicator size="small" color={colors.secondary} />
-                                    : <Text style={styles.saveLink}>Save</Text>}
-                                </TouchableOpacity>
-                                <TouchableOpacity onPress={handleCancelPrices} disabled={savingPrices}>
-                                  <Text style={styles.cancelLink}>Cancel</Text>
-                                </TouchableOpacity>
-                              </>
-                            )}
-                          </>
+                          <View style={styles.priceInputWrap}>
+                            <Text style={styles.currencySymbol}>$</Text>
+                            <TextInput
+                              style={styles.priceInput}
+                              value={pricesDraft[key] === 0 ? '' : String(pricesDraft[key])}
+                              onChangeText={v => {
+                                const n = parseFloat(v);
+                                setPricesDraft(p => ({ ...p, [key]: isNaN(n) ? 0 : n }));
+                              }}
+                              keyboardType="decimal-pad"
+                              placeholder="0"
+                              placeholderTextColor={colors.textDim}
+                            />
+                          </View>
                         ) : (
                           <>
                             <Text style={styles.priceValue}>
                               {prices[key] > 0 ? `$${prices[key]}` : '—'}
                             </Text>
-                            {i === 0 && (
-                              <TouchableOpacity onPress={() => setEditingPrices(true)}>
-                                <Text style={styles.editLink}>Edit</Text>
-                              </TouchableOpacity>
-                            )}
+                            <TouchableOpacity onPress={() => setEditingPrices(true)}>
+                              <Text style={styles.editLink}>Edit</Text>
+                            </TouchableOpacity>
                           </>
                         )}
                       </View>
@@ -276,6 +260,20 @@ export default function SettingsScreen() {
                     </View>
                   </React.Fragment>
                 ))}
+
+                {/* Save / Cancel footer — shown only in edit mode */}
+                {editingPrices && (
+                  <View style={styles.priceFooter}>
+                    <TouchableOpacity onPress={handleCancelPrices} disabled={savingPrices}>
+                      <Text style={styles.cancelLink}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={handleSavePrices} disabled={savingPrices}>
+                      {savingPrices
+                        ? <ActivityIndicator size="small" color={colors.secondary} />
+                        : <Text style={styles.saveLink}>Save</Text>}
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             </>
           )}
@@ -411,6 +409,11 @@ const styles = StyleSheet.create({
   },
   currencySymbol: { color: colors.textMuted, fontSize: 15 },
   priceInput: { color: colors.text, fontSize: 15, minWidth: 60 },
+  priceFooter: {
+    flexDirection: 'row', justifyContent: 'flex-end', gap: 20,
+    paddingHorizontal: 16, paddingVertical: 12,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)',
+  },
   accessHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 16, paddingVertical: 14,
