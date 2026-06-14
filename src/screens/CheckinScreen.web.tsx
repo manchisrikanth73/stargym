@@ -70,7 +70,16 @@ export default function CheckinScreen() {
             resolve();
             return;
           }
-          if (result.data !== GYM_CHECKIN_CODE) {
+
+          // QR may encode the full URL (?checkin=CODE) or just the code string
+          let scannedCode = result.data;
+          try {
+            const url = new URL(result.data);
+            const param = url.searchParams.get('checkin');
+            if (param) scannedCode = param;
+          } catch { /* not a URL, use data as-is */ }
+
+          if (scannedCode !== GYM_CHECKIN_CODE) {
             setError('Invalid QR code. Please scan the StarGym check-in code at the gym entrance.');
             resolve();
             return;
