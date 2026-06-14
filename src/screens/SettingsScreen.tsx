@@ -192,7 +192,7 @@ export default function SettingsScreen() {
           {/* Membership Config — admin only */}
           {isAdmin && (
             <>
-              <Text style={[styles.sectionLabel, { marginTop: 28 }]}>Membership Config</Text>
+              <Text style={[styles.sectionLabel, { marginTop: 28 }]}>Membership</Text>
               <View style={styles.card}>
                 {/* Column header row */}
                 <View style={[styles.gridRow, styles.gridHeaderRow]}>
