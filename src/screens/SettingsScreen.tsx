@@ -189,35 +189,38 @@ export default function SettingsScreen() {
             }
           </TouchableOpacity>
 
-          {/* Membership Prices — admin only */}
+          {/* Membership Config — admin only */}
           {isAdmin && (
             <>
-              <Text style={[styles.sectionLabel, { marginTop: 28 }]}>Membership Prices</Text>
+              <Text style={[styles.sectionLabel, { marginTop: 28 }]}>Membership Config</Text>
               <View style={styles.card}>
+                {/* Column headers */}
                 <View style={styles.priceHeader}>
-                  <Text style={styles.priceHeaderLabel}>Per Month</Text>
+                  <Text style={[styles.colHeader, { flex: 1 }]}>Plan Type</Text>
                   <View style={styles.priceColLabel}>
-                    <Ionicons name="barbell-outline" size={13} color={colors.textMuted} />
-                    <Text style={styles.priceHeaderLabel}>Workouts</Text>
+                    <Text style={styles.colHeader}>Plan Price</Text>
+                    {!editingPrices ? (
+                      <TouchableOpacity onPress={() => setEditingPrices(true)}>
+                        <Text style={styles.editLink}>Edit</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={styles.priceActions}>
+                        <TouchableOpacity onPress={handleCancelPrices} disabled={savingPrices}>
+                          <Text style={styles.cancelLink}>Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={handleSavePrices} disabled={savingPrices}>
+                          {savingPrices
+                            ? <ActivityIndicator size="small" color={colors.secondary} />
+                            : <Text style={styles.saveLink}>Save</Text>
+                          }
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.workoutColHeader}>
+                    <Text style={styles.colHeader}>Workout</Text>
                     {savingAccess && <ActivityIndicator size="small" color={colors.primary} />}
                   </View>
-                  {!editingPrices ? (
-                    <TouchableOpacity onPress={() => setEditingPrices(true)}>
-                      <Text style={styles.editLink}>Edit</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <View style={styles.priceActions}>
-                      <TouchableOpacity onPress={handleCancelPrices} disabled={savingPrices}>
-                        <Text style={styles.cancelLink}>Cancel</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={handleSavePrices} disabled={savingPrices}>
-                        {savingPrices
-                          ? <ActivityIndicator size="small" color={colors.secondary} />
-                          : <Text style={styles.saveLink}>Save</Text>
-                        }
-                      </TouchableOpacity>
-                    </View>
-                  )}
                 </View>
 
                 {MEMBERSHIP_OPTIONS.map(({ key, label, color }, i) => (
@@ -354,7 +357,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 14,
     borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
   },
-  priceColLabel: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 'auto' },
+  colHeader: { color: colors.textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  priceColLabel: { flexDirection: 'row', alignItems: 'center', gap: 8, width: 120 },
+  workoutColHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, width: 72, justifyContent: 'flex-end' },
   priceHeaderLabel: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
   editLink: { color: colors.primary, fontSize: 13, fontWeight: '700' },
   priceActions: { flexDirection: 'row', gap: 16, alignItems: 'center' },
