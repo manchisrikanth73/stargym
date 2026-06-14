@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gym Squat Workout — 10s Canvas Video</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0a;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  #wrapper {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+  }
+  canvas { display: block; }
+  #ui {
+    background: rgba(10,10,10,0.95);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    user-select: none;
+  }
+  #playBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #fff;
+    font-size: 20px;
+    line-height: 1;
+    padding: 0 4px;
+    flex-shrink: 0;
+  }
+  #playBtn:hover { color: #4af; }
+  #progressTrack {
+    flex: 1;
+    height: 4px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 2px;
+    cursor: pointer;
+    position: relative;
+  }
+  #progressFill {
+    height: 100%;
+    background: #4af;
+    border-radius: 2px;
+    width: 0%;
+    pointer-events: none;
+  }
+  #progressThumb {
+    position: absolute;
+    top: 50%;
+    left: 0%;
+    transform: translate(-50%, -50%);
+    width: 12px;
+    height: 12px;
+    background: #fff;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  #progressTrack:hover #progressThumb { opacity: 1; }
+  #timer {
+    color: #aaa;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+    min-width: 72px;
+    text-align: right;
+  }
+</style>
+</head>
+<body>
+<div id="wrapper">
+  <canvas id="c" width="720" height="404"></canvas>
+  <div id="ui">
+    <button id="playBtn">▶</button>
+    <div id="progressTrack">
+      <div id="progressFill"></div>
+      <div id="progressThumb"></div>
+    </div>
+    <div id="timer">0.0 / 10.0s</div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+/* ── timing ─────────────────────────────────────── */
+const DURATION = 10000;
+let raf = null, playing = false, startTs = null, pausedMs = 0;
+
+/* ── easing ─────────────────────────────────────── */
+const ease = t => t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t;
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+
+/* ── squat curve over 10 s ───────────────────────
+   Two full reps:
+   0.00–0.05 stand hold
+   0.05–0.28 descent rep1
+   0.28–0.38 bottom hold
+   0.38–0.60 ascent rep1
+   0.60–0.65 stand pause
+   0.65–0.88 descent rep2
+   0.88–0.95 bottom hold
+   0.95–1.00 ascent rep2 (partial)
+*/
+function squatCurve(t) {
+  const seg = (t, t0, t1) => clamp((t - t0) / (t1 - t0), 0, 1);
+
+  if (t < 0.05) return 0;
+  if (t < 0.28) return ease(seg(t, 0.05, 0.28));
+  if (t < 0.38) return 1;
+  if (t < 0.60) return 1 - ease(seg(t, 0.38, 0.60));
+  if (t < 0.65) return 0;
+  if (t < 0.88) return ease(seg(t, 0.65, 0.88));
+  if (t < 0.95) return 1;
+  return 1 - ease(seg(t, 0.95, 1.00));
+}
+
+/* ── gym background ──────────────────────────────── */
+function drawBg() {
+  /* ceiling */
+  const ceilH = H * 0.07;
+  ctx.fillStyle = '#e6e0d0';
+  ctx.fillRect(0, 0, W, ceilH);
+
+  /* ceiling lights */
+  const lightPositions = [0.22, 0.5, 0.78];
+  lightPositions.forEach(lx => {
+    const px = W * lx;
+    // fixture panel
+    ctx.fillStyle = '#fff8e4';
+    ctx.fillRect(px - W * 0.07, 0, W * 0.14, ceilH * 0.45);
+    // glow cone
+    const g = ctx.createRadialGradient(px, 0, 0, px, 0, W * 0.38);
+    g.addColorStop(0,   'rgba(255,252,230,0.55)');
+    g.addColorStop(0.15,'rgba(255,250,210,0.25)');
+    g.addColorStop(1,   'rgba(255,250,210,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H * 0.8);
+  });
+
+  /* back wall */
+  const wallGrad = ctx.createLinearGradient(0, ceilH, 0, H * 0.73);
+  wallGrad.addColorStop(0, '#cfc9bb');
+  wallGrad.addColorStop(1, '#bfbaae');
+  ctx.fillStyle = wallGrad;
+  ctx.fillRect(0, ceilH, W, H * 0.73 - ceilH);
+
+  /* large floor-to-ceiling mirror */
+  ctx.save();
+  ctx.fillStyle = 'rgba(185,200,215,0.13)';
+  ctx.fillRect(W * 0.05, ceilH + 4, W * 0.9, H * 0.62);
+  ctx.strokeStyle = '#a09890';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(W * 0.05, ceilH + 4, W * 0.9, H * 0.62);
+  ctx.strokeStyle = 'rgba(200,195,185,0.5)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(W * 0.055, ceilH + 10, W * 0.89, H * 0.61);
+  ctx.restore();
+
+  /* weight rack silhouettes (far left & right, faint) */
+  ctx.strokeStyle = 'rgba(80,70,60,0.25)';
+  ctx.lineWidth = 2;
+  [[0.07, 0.11, 0.15], [0.85, 0.89, 0.93]].forEach(xs => {
+    xs.forEach(x => {
+      ctx.beginPath();
+      ctx.moveTo(W*x, H*0.18);
+      ctx.lineTo(W*x, H*0.68);
+      ctx.stroke();
+    });
+    ctx.beginPath();
+    ctx.moveTo(W*xs[0], H*0.22); ctx.lineTo(W*xs[2], H*0.22);
+    ctx.moveTo(W*xs[0], H*0.35); ctx.lineTo(W*xs[2], H*0.35);
+    ctx.moveTo(W*xs[0], H*0.48); ctx.lineTo(W*xs[2], H*0.48);
+    ctx.stroke();
+  });
+
+  /* rubber floor */
+  const floorY = H * 0.73;
+  const floorGrad = ctx.createLinearGradient(0, floorY, 0, H);
+  floorGrad.addColorStop(0, '#2e2924');
+  floorGrad.addColorStop(0.25, '#3a342e');
+  floorGrad.addColorStop(1, '#1a1612');
+  ctx.fillStyle = floorGrad;
+  ctx.fillRect(0, floorY, W, H - floorY);
+
+  /* floor grid texture */
+  ctx.strokeStyle = 'rgba(50,42,34,0.65)';
+  ctx.lineWidth = 0.8;
+  for (let i = 0; i <= 18; i++) {
+    const x = W * i / 18;
+    ctx.beginPath(); ctx.moveTo(x, floorY); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let i = 0; i <= 5; i++) {
+    const y = floorY + (H - floorY) * i / 5;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  /* floor highlight / sheen */
+  const sheen = ctx.createLinearGradient(0, floorY, 0, floorY + (H-floorY)*0.35);
+  sheen.addColorStop(0, 'rgba(255,248,235,0.08)');
+  sheen.addColorStop(1, 'rgba(255,248,235,0)');
+  ctx.fillStyle = sheen;
+  ctx.fillRect(0, floorY, W, (H - floorY) * 0.35);
+}
+
+/* ── human figure ────────────────────────────────── */
+/*
+  Front-camera squat.
+  Coordinate system: ground at groundY, character centred at cx.
+  All measurements relative to `S` (scale, ≈ person's standing height).
+*/
+function drawPerson(sq) {
+  const cx     = W * 0.5;
+  const groundY= H * 0.73;
+  const S      = H * 0.56; // standing height
+
+  /* ── joint positions ──
+     Knees track outward & forward (appear to rise slightly in 2D front view).
+     Hip drops proportionally.
+     Torso leans forward slightly.
+     Arms extend forward (outward in 2D projection).
+  */
+
+  // feet — fixed, toes slightly out
+  const footLx = cx - S * 0.11, footRx = cx + S * 0.11;
+  const footY  = groundY - S * 0.015;
+
+  // knees
+  const kneeBaseY = groundY - S * 0.265;
+  const kneeSqY   = groundY - S * 0.175; // knees actually drop a tiny bit visually
+  const kneeY     = lerp(kneeBaseY, kneeSqY, sq);
+  const kneeLx    = lerp(cx - S * 0.10, cx - S * 0.165, sq);
+  const kneeRx    = lerp(cx + S * 0.10, cx + S * 0.165, sq);
+
+  // hips
+  const hipBaseY  = groundY - S * 0.52;
+  const hipSqY    = groundY - S * 0.25;
+  const hipY      = lerp(hipBaseY, hipSqY, sq);
+  const hipLx     = cx - S * 0.075;
+  const hipRx     = cx + S * 0.075;
+
+  // torso lean (forward = lean brings shoulders slightly in front of hips in 2D)
+  const lean      = sq * S * 0.055;
+  const shoulderY = hipY  - S * 0.265;
+  const shoulderLx= cx - S * 0.16 - lean;
+  const shoulderRx= cx + S * 0.16 - lean;
+  const torsoMidX = cx - lean * 0.5;
+
+  // neck & head
+  const neckY  = shoulderY - S * 0.038;
+  const headY  = neckY - S * 0.075;
+  const headX  = cx - lean * 0.65;
+  const headRy = S * 0.075;
+  const headRx = headRy * 0.77;
+
+  /* ── colours ── */
+  const skin     = '#c07848';
+  const darkSkin = '#9e5e32';
+  const hair     = '#150800';
+  const shirt    = '#1b3f80';
+  const shirtSh  = '#122a58';
+  const shorts   = '#1c1c1c';
+  const shortsSh = '#111';
+  const shoe     = '#141414';
+  const shoeSole = '#303030';
+  const shoeStr  = '#d0d0d0';
+
+  /* ── shadow ── */
+  const shadowW = lerp(S * 0.16, S * 0.24, sq);
+  const shadowH = S * 0.018;
+  const shadowG = ctx.createRadialGradient(cx, groundY, 0, cx, groundY, shadowW);
+  shadowG.addColorStop(0, 'rgba(0,0,0,0.38)');
+  shadowG.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = shadowG;
+  ctx.beginPath();
+  ctx.ellipse(cx, groundY + 1, shadowW, shadowH, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  /* ── shoes ── */
+  function drawShoe(px, side) {
+    const tw = S * 0.11 * (side === 'L' ? 1 : -1);
+    ctx.save();
+    // sole
+    ctx.beginPath();
+    ctx.ellipse(px + tw * 0.08, footY + S*0.01, S*0.075, S*0.022, side==='L'?0.08:-0.08, 0, Math.PI*2);
+    ctx.fillStyle = shoeSole;
+    ctx.fill();
+    // upper
+    ctx.beginPath();
+    ctx.ellipse(px + tw * 0.06, footY - S*0.004, S*0.068, S*0.019, side==='L'?0.06:-0.06, 0, Math.PI*2);
+    ctx.fillStyle = shoe;
+    ctx.fill();
+    // stripe
+    ctx.strokeStyle = shoeStr;
+    ctx.lineWidth   = S * 0.007;
+    ctx.lineCap     = 'round';
+    ctx.beginPath();
+    ctx.moveTo(px + tw * -0.05, footY - S*0.005);
+    ctx.lineTo(px + tw *  0.18, footY - S*0.005);
+    ctx.stroke();
+    ctx.restore();
+  }
+  drawShoe(footLx, 'L');
+  drawShoe(footRx, 'R');
+
+  /* ── legs ── */
+  const legW = S * 0.08;
+
+  function drawLimb(x0, y0, x1, y1, w, color) {
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = w;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+
+  // shins
+  drawLimb(footLx, footY, kneeLx, kneeY, legW * 0.92, shortsSh);
+  drawLimb(footRx, footY, kneeRx, kneeY, legW * 0.92, shorts);
+  // thighs
+  drawLimb(kneeLx, kneeY, hipLx, hipY, legW * 1.05, shortsSh);
+  drawLimb(kneeRx, kneeY, hipRx, hipY, legW * 1.05, shorts);
+
+  /* ── kneecap highlights ── */
+  [kneeLx, kneeRx].forEach(kx => {
+    ctx.beginPath();
+    ctx.arc(kx, kneeY, S * 0.038, 0, Math.PI * 2);
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(kx - S*0.01, kneeY - S*0.01, S * 0.012, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fill();
+  });
+
+  /* ── torso ── */
+  ctx.beginPath();
+  ctx.moveTo(hipLx,      hipY);
+  ctx.lineTo(hipRx,      hipY);
+  ctx.lineTo(shoulderRx, shoulderY);
+  ctx.lineTo(shoulderLx, shoulderY);
+  ctx.closePath();
+  const tG = ctx.createLinearGradient(shoulderLx, shoulderY, shoulderRx + S*0.05, hipY);
+  tG.addColorStop(0, '#16336e');
+  tG.addColorStop(0.45, '#1e4a90');
+  tG.addColorStop(1, shirtSh);
+  ctx.fillStyle = tG;
+  ctx.fill();
+
+  // shirt collar V
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+  ctx.lineWidth = S * 0.012;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(torsoMidX - S * 0.045, shoulderY + S * 0.005);
+  ctx.lineTo(torsoMidX,             shoulderY + S * 0.048);
+  ctx.lineTo(torsoMidX + S * 0.045, shoulderY + S * 0.005);
+  ctx.stroke();
+
+  /* ── arms ── */
+  // When squatting, arms extend forward (outward & slightly down in 2D)
+  const armFwd = sq * S * 0.10;
+  const armDn  = (1 - sq) * S * 0.045;
+
+  // elbow
+  const elbowLx = shoulderLx - S * 0.055 - armFwd;
+  const elbowRx = shoulderRx + S * 0.055 + armFwd;
+  const elbowY  = shoulderY  + S * 0.115 + armDn;
+
+  // wrist / hand
+  const wristLx = elbowLx - S * 0.025 - armFwd * 0.7;
+  const wristRx = elbowRx + S * 0.025 + armFwd * 0.7;
+  const wristY  = elbowY  + S * 0.095 + armDn * 0.45;
+
+  // upper arms (shirt)
+  drawLimb(shoulderLx, shoulderY + S*0.018, elbowLx, elbowY, S*0.065, shirtSh);
+  drawLimb(shoulderRx, shoulderY + S*0.018, elbowRx, elbowY, S*0.065, shirt);
+
+  // forearms (skin)
+  drawLimb(elbowLx, elbowY, wristLx, wristY, S*0.048, darkSkin);
+  drawLimb(elbowRx, elbowY, wristRx, wristY, S*0.048, skin);
+
+  // hands
+  [wristLx, wristRx].forEach((wx, i) => {
+    const wy = wristY + S * 0.018;
+    ctx.beginPath();
+    ctx.ellipse(wx, wy, S*0.028, S*0.022, i===0?-0.3:0.3, 0, Math.PI*2);
+    ctx.fillStyle = i === 0 ? darkSkin : skin;
+    ctx.fill();
+  });
+
+  /* ── neck ── */
+  ctx.beginPath();
+  ctx.moveTo(torsoMidX - S*0.038, shoulderY);
+  ctx.lineTo(torsoMidX + S*0.038, shoulderY);
+  ctx.lineTo(headX     + S*0.028, neckY);
+  ctx.lineTo(headX     - S*0.028, neckY);
+  ctx.closePath();
+  ctx.fillStyle = skin;
+  ctx.fill();
+
+  /* ── head ── */
+  // Head shape
+  ctx.beginPath();
+  ctx.ellipse(headX, headY, headRx, headRy, 0, 0, Math.PI * 2);
+  ctx.fillStyle = skin;
+  ctx.fill();
+
+  // Hair (close-cropped — dark cap on upper ~55%)
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(headX, headY, headRx, headRy, 0, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.fillStyle = hair;
+  ctx.fillRect(headX - headRx - 2, headY - headRy - 2, headRx * 2 + 4, headRy * 1.05);
+  ctx.restore();
+
+  // Ear
+  ctx.beginPath();
+  ctx.ellipse(headX - headRx * 0.96, headY + headRy * 0.08, headRx * 0.13, headRy * 0.22, 0, 0, Math.PI * 2);
+  ctx.fillStyle = darkSkin;
+  ctx.fill();
+
+  // Eyebrow
+  ctx.strokeStyle = '#0a0500';
+  ctx.lineWidth = S * 0.011;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(headX - headRx*0.42, headY - headRy*0.04);
+  ctx.quadraticCurveTo(headX - headRx*0.22, headY - headRy*0.14, headX - headRx*0.04, headY - headRy*0.06);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(headX + headRx*0.04, headY - headRy*0.06);
+  ctx.quadraticCurveTo(headX + headRx*0.22, headY - headRy*0.14, headX + headRx*0.42, headY - headRy*0.04);
+  ctx.stroke();
+
+  // Eyes
+  ctx.fillStyle = '#fff';
+  [[headX - headRx*0.28, headY + headRy*0.07], [headX + headRx*0.28, headY + headRy*0.07]].forEach(([ex, ey]) => {
+    ctx.beginPath();
+    ctx.ellipse(ex, ey, headRx*0.16, headRy*0.10, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(ex + headRx*0.015, ey + headRy*0.01, headRy*0.065, 0, Math.PI*2);
+    ctx.fillStyle = '#111';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(ex + headRx*0.04, ey - headRy*0.02, headRy*0.02, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+  });
+
+  // Nose
+  ctx.strokeStyle = '#9e5e38';
+  ctx.lineWidth = S * 0.008;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(headX - headRx*0.07, headY + headRy*0.15);
+  ctx.quadraticCurveTo(headX - headRx*0.14, headY + headRy*0.33, headX - headRx*0.10, headY + headRy*0.38);
+  ctx.moveTo(headX - headRx*0.10, headY + headRy*0.38);
+  ctx.quadraticCurveTo(headX,              headY + headRy*0.42, headX + headRx*0.10, headY + headRy*0.38);
+  ctx.moveTo(headX + headRx*0.10, headY + headRy*0.38);
+  ctx.quadraticCurveTo(headX + headRx*0.14, headY + headRy*0.33, headX + headRx*0.07, headY + headRy*0.15);
+  ctx.stroke();
+
+  // Mouth — focused, neutral
+  ctx.strokeStyle = '#7a3e20';
+  ctx.lineWidth = S * 0.008;
+  ctx.beginPath();
+  ctx.moveTo(headX - headRx*0.2, headY + headRy*0.56);
+  ctx.quadraticCurveTo(headX, headY + headRy*0.60, headX + headRx*0.2, headY + headRy*0.56);
+  ctx.stroke();
+
+  /* ── subtle depth gradient over whole body ── */
+  const depthG = ctx.createLinearGradient(cx - S*0.22, 0, cx + S*0.22, 0);
+  depthG.addColorStop(0,   'rgba(0,0,0,0.08)');
+  depthG.addColorStop(0.3, 'rgba(0,0,0,0)');
+  depthG.addColorStop(0.7, 'rgba(0,0,0,0)');
+  depthG.addColorStop(1,   'rgba(0,0,0,0.10)');
+  ctx.fillStyle = depthG;
+  ctx.fillRect(cx - S*0.3, headY - headRy, S*0.6, groundY - (headY - headRy));
+}
+
+/* ── frame counter overlay ─────────────────────── */
+function drawOverlay(tMs) {
+  const secs = tMs / 1000;
+  // top-left subtle rec indicator while playing
+  if (playing) {
+    ctx.fillStyle = 'rgba(220,50,50,0.85)';
+    ctx.beginPath();
+    ctx.arc(W - 18, 14, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('REC', W - 26, 18);
+  }
+  // faint timecode bottom-right
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '11px monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(secs.toFixed(2) + 's', W - 10, H - 8);
+}
+
+/* ── main render ───────────────────────────────── */
+function render(ms) {
+  const t  = clamp(ms / DURATION, 0, 1);
+  const sq = squatCurve(t);
+
+  ctx.clearRect(0, 0, W, H);
+  drawBg();
+  drawPerson(sq);
+  drawOverlay(ms);
+}
+
+/* ── animation loop ────────────────────────────── */
+function loop(ts) {
+  if (!startTs) startTs = ts;
+  const elapsed = ts - startTs + pausedMs;
+  if (elapsed >= DURATION) {
+    // loop seamlessly
+    pausedMs = 0;
+    startTs  = ts;
+  }
+  const displayMs = Math.min(elapsed % DURATION, DURATION);
+  render(displayMs);
+
+  const pct = (displayMs / DURATION) * 100;
+  document.getElementById('progressFill').style.width  = pct + '%';
+  document.getElementById('progressThumb').style.left  = pct + '%';
+  document.getElementById('timer').textContent = (displayMs/1000).toFixed(1) + ' / 10.0s';
+
+  raf = requestAnimationFrame(loop);
+}
+
+/* ── controls ──────────────────────────────────── */
+const playBtn = document.getElementById('playBtn');
+playBtn.addEventListener('click', () => {
+  if (playing) {
+    // pause
+    playing = false;
+    const now = performance.now();
+    pausedMs += (now - startTs);
+    startTs = null;
+    cancelAnimationFrame(raf); raf = null;
+    playBtn.textContent = '▶';
+  } else {
+    // play
+    playing = true;
+    startTs = null;
+    playBtn.textContent = '⏸';
+    raf = requestAnimationFrame(loop);
+  }
+});
+
+document.getElementById('progressTrack').addEventListener('click', e => {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const pct  = clamp((e.clientX - rect.left) / rect.width, 0, 1);
+  pausedMs   = pct * DURATION;
+  startTs    = null;
+  if (!playing) render(pct * DURATION);
+  document.getElementById('progressFill').style.width = pct * 100 + '%';
+  document.getElementById('timer').textContent = (pct * 10).toFixed(1) + ' / 10.0s';
+});
+
+// Draw first frame
+render(0);
+</script>
+</body>
+</html>
