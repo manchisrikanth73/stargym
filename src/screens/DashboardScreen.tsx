@@ -19,6 +19,12 @@ import { getUserProfile, getAllUsers } from '../services/users';
 import { colors } from '../theme/colors';
 import { GYM_CHECKIN_CODE } from '../config';
 
+const MEMBERSHIP_COLOR: Record<string, string> = {
+  basic: colors.primary,
+  premium: '#9B59B6',
+  vip: '#FFD700',
+};
+
 const QUOTES = [
   'Every rep counts. Every session matters.',
   "The pain you feel today is the strength of tomorrow.",
@@ -38,6 +44,7 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activationStartDate, setActivationStartDate] = useState<string | null>(null);
   const [activationEndDate, setActivationEndDate] = useState<string | null>(null);
+  const [membershipType, setMembershipType] = useState<string | null>(null);
 
   const user = auth.currentUser;
   const displayName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Athlete';
@@ -62,6 +69,7 @@ export default function DashboardScreen() {
     setIsActive(profile?.isActive ?? true);
     setActivationStartDate(profile?.activationStartDate ?? null);
     setActivationEndDate(profile?.activationEndDate ?? null);
+    setMembershipType(profile?.membershipType ?? null);
     const admin = profile?.role === 'admin';
     setIsAdmin(admin);
     if (admin) {
@@ -170,8 +178,17 @@ export default function DashboardScreen() {
 
           {activationStartDate && (
             <View style={styles.membershipCard}>
-              <Ionicons name="ribbon-outline" size={18} color={colors.primary} style={{ marginBottom: 8 }} />
-              <Text style={styles.membershipCardLabel}>Membership Period</Text>
+              <View style={styles.membershipCardHeader}>
+                <Ionicons name="ribbon-outline" size={18} color={colors.primary} />
+                <Text style={styles.membershipCardLabel}>Membership</Text>
+                {membershipType && (
+                  <View style={[styles.membershipTypeBadge, { backgroundColor: `${MEMBERSHIP_COLOR[membershipType] ?? colors.primary}22` }]}>
+                    <Text style={[styles.membershipTypeText, { color: MEMBERSHIP_COLOR[membershipType] ?? colors.primary }]}>
+                      {membershipType.toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+              </View>
               <View style={styles.membershipDates}>
                 <View style={styles.membershipDateCol}>
                   <Text style={styles.membershipDateLabel}>Start</Text>
@@ -413,13 +430,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: `${colors.primary}33`,
   },
+  membershipCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 14,
+  },
   membershipCardLabel: {
     color: colors.textMuted,
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginBottom: 12,
+    flex: 1,
+  },
+  membershipTypeBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  membershipTypeText: {
+    fontSize: 11,
+    fontWeight: '800',
   },
   membershipDates: { flexDirection: 'row', alignItems: 'center' },
   membershipDateCol: { flex: 1 },
