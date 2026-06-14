@@ -15,6 +15,19 @@ export default function CheckinScreen() {
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
 
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('checkin');
+    if (!code) return;
+    window.history.replaceState({}, '', window.location.pathname);
+    if (code !== GYM_CHECKIN_CODE) { setError('Invalid QR code.'); return; }
+    setScanning(true);
+    checkIn()
+      .then(success => { if (success) setDone(true); else setError('You have already checked in today!'); })
+      .catch(() => setError('Check-in failed. Please try again.'))
+      .finally(() => setScanning(false));
+  }, []);
+
   const openCamera = () => {
     setError('');
     const input = document.createElement('input');
