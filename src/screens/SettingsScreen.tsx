@@ -38,7 +38,6 @@ export default function SettingsScreen() {
   const [prices, setPrices] = useState<MembershipPrices>({ basic: 0, premium: 0, vip: 0 });
   const [pricesDraft, setPricesDraft] = useState<MembershipPrices>({ basic: 0, premium: 0, vip: 0 });
   const [editingPrices, setEditingPrices] = useState(false);
-  const [savingPrices, setSavingPrices] = useState(false);
 
   const [workoutAccess, setWorkoutAccessState] = useState<WorkoutAccess>({ basic: false, premium: true, vip: true });
   const [savingAccess, setSavingAccess] = useState(false);
@@ -99,6 +98,11 @@ export default function SettingsScreen() {
         update.phone = phone.trim();
       }
       await updateUserProfile(user.uid, update);
+      if (isAdmin && editingPrices) {
+        await setMembershipPrices(pricesDraft);
+        setPrices(pricesDraft);
+        setEditingPrices(false);
+      }
       setOriginal({ firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), phone: phone.trim() });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -109,23 +113,6 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleSavePrices = async () => {
-    setSavingPrices(true);
-    try {
-      await setMembershipPrices(pricesDraft);
-      setPrices(pricesDraft);
-      setEditingPrices(false);
-    } catch (err: any) {
-      notify('Error', err.message ?? 'Failed to save prices.');
-    } finally {
-      setSavingPrices(false);
-    }
-  };
-
-  const handleCancelPrices = () => {
-    setPricesDraft(prices);
-    setEditingPrices(false);
-  };
 
   return (
     <View style={styles.root}>
@@ -247,19 +234,6 @@ export default function SettingsScreen() {
                   </React.Fragment>
                 ))}
 
-                {/* Save / Cancel footer — shown only in edit mode */}
-                {editingPrices && (
-                  <View style={styles.priceFooter}>
-                    <TouchableOpacity onPress={handleCancelPrices} disabled={savingPrices}>
-                      <Text style={styles.cancelLink}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={handleSavePrices} disabled={savingPrices}>
-                      {savingPrices
-                        ? <ActivityIndicator size="small" color={colors.secondary} />
-                        : <Text style={styles.saveLink}>Save</Text>}
-                    </TouchableOpacity>
-                  </View>
-                )}
               </View>
             </>
           )}
@@ -268,7 +242,7 @@ export default function SettingsScreen() {
           {success && (
             <View style={styles.successBox}>
               <Ionicons name="checkmark-circle-outline" size={18} color={colors.success} />
-              <Text style={styles.successText}>Profile updated successfully.</Text>
+              <Text style={styles.successText}>All changes applied successfully.</Text>
             </View>
           )}
 
@@ -281,6 +255,10 @@ export default function SettingsScreen() {
                 setLastName(original.lastName);
                 setEmail(original.email);
                 setPhone(original.phone);
+                if (isAdmin && editingPrices) {
+                  setPricesDraft(prices);
+                  setEditingPrices(false);
+                }
               }}
               disabled={saving}
             >
