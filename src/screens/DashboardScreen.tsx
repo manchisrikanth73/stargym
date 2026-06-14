@@ -36,6 +36,8 @@ export default function DashboardScreen() {
   const [memberInactive, setMemberInactive] = useState(0);
   const [showGymQR, setShowGymQR] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [activationStartDate, setActivationStartDate] = useState<string | null>(null);
+  const [activationEndDate, setActivationEndDate] = useState<string | null>(null);
 
   const user = auth.currentUser;
   const displayName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Athlete';
@@ -58,6 +60,8 @@ export default function DashboardScreen() {
     setCheckedIn(ci);
     setMonthlyCount(mc);
     setIsActive(profile?.isActive ?? true);
+    setActivationStartDate(profile?.activationStartDate ?? null);
+    setActivationEndDate(profile?.activationEndDate ?? null);
     const admin = profile?.role === 'admin';
     setIsAdmin(admin);
     if (admin) {
@@ -84,6 +88,13 @@ export default function DashboardScreen() {
   };
 
   const monthName = dayjs().format('MMM');
+
+  const fmtDate = (d: string | null): string => {
+    if (!d) return '—';
+    const [y, m, day] = d.split('-');
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${day} ${MONTHS[+m - 1]} ${y}`;
+  };
 
   return (
     <ScrollView
@@ -143,18 +154,40 @@ export default function DashboardScreen() {
           </View>
         </>
       ) : (
-        <View style={styles.statsRow}>
-          <View style={[styles.statCard, { borderColor: `${colors.primary}44` }]}>
-            <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-            <Text style={[styles.statValue, { color: colors.primary }]}>{monthlyCount}</Text>
-            <Text style={styles.statLabel}>{monthName} Sessions</Text>
+        <>
+          <View style={styles.statsRow}>
+            <View style={[styles.statCard, { borderColor: `${colors.primary}44` }]}>
+              <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+              <Text style={[styles.statValue, { color: colors.primary }]}>{monthlyCount}</Text>
+              <Text style={styles.statLabel}>{monthName} Sessions</Text>
+            </View>
+            <View style={[styles.statCard, { borderColor: `${colors.secondary}44` }]}>
+              <Ionicons name="flame-outline" size={20} color={colors.secondary} />
+              <Text style={[styles.statValue, { color: colors.secondary }]}>{checkedIn ? '🔥' : '—'}</Text>
+              <Text style={styles.statLabel}>Today</Text>
+            </View>
           </View>
-          <View style={[styles.statCard, { borderColor: `${colors.secondary}44` }]}>
-            <Ionicons name="flame-outline" size={20} color={colors.secondary} />
-            <Text style={[styles.statValue, { color: colors.secondary }]}>{checkedIn ? '🔥' : '—'}</Text>
-            <Text style={styles.statLabel}>Today</Text>
-          </View>
-        </View>
+
+          {activationStartDate && (
+            <View style={styles.membershipCard}>
+              <Ionicons name="ribbon-outline" size={18} color={colors.primary} style={{ marginBottom: 8 }} />
+              <Text style={styles.membershipCardLabel}>Membership Period</Text>
+              <View style={styles.membershipDates}>
+                <View style={styles.membershipDateCol}>
+                  <Text style={styles.membershipDateLabel}>Start</Text>
+                  <Text style={styles.membershipDateValue}>{fmtDate(activationStartDate)}</Text>
+                </View>
+                <View style={styles.membershipDateDivider} />
+                <View style={styles.membershipDateCol}>
+                  <Text style={styles.membershipDateLabel}>End</Text>
+                  <Text style={styles.membershipDateValue}>
+                    {activationEndDate ? fmtDate(activationEndDate) : 'Open-ended'}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
+        </>
       )}
 
       {/* Gym QR Card — admin only */}
@@ -371,6 +404,33 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   motivText: { color: colors.textMuted, fontSize: 14, fontStyle: 'italic', lineHeight: 22 },
+  membershipCard: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 18,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: `${colors.primary}33`,
+  },
+  membershipCardLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 12,
+  },
+  membershipDates: { flexDirection: 'row', alignItems: 'center' },
+  membershipDateCol: { flex: 1 },
+  membershipDateLabel: { color: colors.textMuted, fontSize: 11, marginBottom: 4 },
+  membershipDateValue: { color: colors.text, fontSize: 15, fontWeight: '700' },
+  membershipDateDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginHorizontal: 16,
+  },
   gymQrCard: {
     marginHorizontal: 20, marginBottom: 20, padding: 18,
     backgroundColor: colors.surface, borderRadius: 16,

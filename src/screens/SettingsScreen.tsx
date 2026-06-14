@@ -23,9 +23,6 @@ export default function SettingsScreen() {
   const [lastName, setLastName]   = useState('');
   const [email, setEmail]         = useState('');
   const [phone, setPhone]         = useState('');
-  const [activationStartDate, setActivationStartDate] = useState<string | null>(null);
-  const [activationEndDate, setActivationEndDate]     = useState<string | null>(null);
-
   useEffect(() => {
     (async () => {
       const profile = await getUserProfile(user.uid);
@@ -35,8 +32,6 @@ export default function SettingsScreen() {
       setEmail(profile?.email ?? user.email ?? '');
       setPhone(profile?.phone ?? '');
       setIsAdmin(profile?.role === 'admin');
-      setActivationStartDate(profile?.activationStartDate ?? null);
-      setActivationEndDate(profile?.activationEndDate ?? null);
       setLoading(false);
     })();
   }, []);
@@ -142,20 +137,6 @@ export default function SettingsScreen() {
           </View>
 
           {/* Membership Period — read only */}
-          {(activationStartDate || activationEndDate) && (
-            <>
-              <Text style={styles.sectionLabel}>Membership Period</Text>
-              <View style={styles.card}>
-                <ReadOnlyField label="Start Date" value={fmtDate(activationStartDate)} />
-                <View style={styles.fieldDivider} />
-                <ReadOnlyField
-                  label="End Date"
-                  value={activationEndDate ? fmtDate(activationEndDate) : 'Open-ended'}
-                />
-              </View>
-            </>
-          )}
-
           {success && (
             <View style={styles.successBox}>
               <Ionicons name="checkmark-circle-outline" size={18} color={colors.success} />
@@ -176,22 +157,6 @@ export default function SettingsScreen() {
 
         </ScrollView>
       )}
-    </View>
-  );
-}
-
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-function fmtDate(d: string | null): string {
-  if (!d) return '—';
-  const [y, m, day] = d.split('-');
-  return `${day} ${MONTHS[+m - 1]} ${y}`;
-}
-
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.field}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <Text style={[styles.fieldInput, { color: colors.textMuted }]}>{value}</Text>
     </View>
   );
 }
