@@ -15,7 +15,7 @@ import { DrawerActions, useNavigation } from '@react-navigation/native';
 import dayjs from 'dayjs';
 import { auth } from '../services/firebase';
 import { isCheckedInToday, getMonthlyCount } from '../services/attendance';
-import { getUserProfile, getAllUsers } from '../services/users';
+import { getUserProfile, getAllUsers, updateUserProfile } from '../services/users';
 import { colors } from '../theme/colors';
 import { GYM_CHECKIN_CODE } from '../config';
 
@@ -45,6 +45,7 @@ export default function DashboardScreen() {
   const [activationStartDate, setActivationStartDate] = useState<string | null>(null);
   const [activationEndDate, setActivationEndDate] = useState<string | null>(null);
   const [membershipType, setMembershipType] = useState<string | null>(null);
+  const [isExpired, setIsExpired] = useState(false);
 
   const user = auth.currentUser;
   const displayName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Athlete';
@@ -66,9 +67,21 @@ export default function DashboardScreen() {
     ]);
     setCheckedIn(ci);
     setMonthlyCount(mc);
-    setIsActive(profile?.isActive ?? true);
+    const endDate = profile?.activationEndDate ?? null;
+    const today = dayjs().format('YYYY-MM-DD');
+    const expired = !!endDate && endDate < today;
+    if (expired) {
+      setIsExpired(true);
+      setIsActive(false);
+      if (profile?.isActive && uid) {
+        updateUserProfile(uid, { isActive: false }).catch(() => {});
+      }
+    } else {
+      setIsExpired(false);
+      setIsActive(profile?.isActive ?? true);
+    }
     setActivationStartDate(profile?.activationStartDate ?? null);
-    setActivationEndDate(profile?.activationEndDate ?? null);
+    setActivationEndDate(endDate);
     setMembershipType(profile?.membershipType ?? null);
     const admin = profile?.role === 'admin';
     setIsAdmin(admin);
@@ -119,8 +132,17 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      {/* Pending approval banner */}
-      {!isActive && (
+      {/* Expired / pending banner */}
+      {!isAdmin && isExpired && (
+        <View style={[styles.pendingBanner, styles.expiredBanner]}>
+          <Ionicons name="alert-circle-outline" size={20} color={colors.error} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.pendingTitle, { color: colors.error }]}>Membership Expired</Text>
+            <Text style={styles.pendingSub}>Your membership has expired. Please contact the gym admin to renew.</Text>
+          </View>
+        </View>
+      )}
+      {!isAdmin && !isExpired && !isActive && (
         <View style={styles.pendingBanner}>
           <Ionicons name="time-outline" size={20} color={colors.secondary} />
           <View style={{ flex: 1 }}>
@@ -226,6 +248,7 @@ export default function DashboardScreen() {
         <TouchableOpacity
           style={[styles.checkinCard, checkedIn && styles.checkinCardDone, !isActive && styles.checkinCardDisabled]}
           onPress={() => {
+            if (isExpired) { Alert.alert('Membership Expired', 'Please contact the gym admin to renew your membership.'); return; }
             if (!isActive) { Alert.alert('Account pending', 'Your account is awaiting admin approval.'); return; }
             checkedIn ? Alert.alert('Already checked in!', 'See you tomorrow 💪') : navigation.navigate('Checkin');
           }}
@@ -235,8 +258,12 @@ export default function DashboardScreen() {
             <Ionicons name={!isActive ? 'lock-closed' : checkedIn ? 'checkmark-circle' : 'qr-code'} size={32} color="#fff" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.checkinTitle}>{!isActive ? 'Account Pending' : checkedIn ? 'Checked In!' : 'Check In Now'}</Text>
-            <Text style={styles.checkinSub}>{!isActive ? 'Awaiting admin approval' : checkedIn ? 'Great work today 💪' : 'Tap to scan gym QR code'}</Text>
+            <Text style={styles.checkinTitle}>
+              {isExpired ? 'Membership Expired' : !isActive ? 'Account Pending' : checkedIn ? 'Checked In!' : 'Check In Now'}
+            </Text>
+            <Text style={styles.checkinSub}>
+              {isExpired ? 'Contact admin to renew' : !isActive ? 'Awaiting admin approval' : checkedIn ? 'Great work today 💪' : 'Tap to scan gym QR code'}
+            </Text>
           </View>
           {isActive && !checkedIn && <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />}
         </TouchableOpacity>
@@ -387,6 +414,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: `${colors.secondary}44`,
+  },
+  expiredBanner: {
+    backgroundColor: `${colors.error}18`,
+    borderColor: `${colors.error}44`,
   },
   pendingTitle: { color: colors.secondary, fontSize: 14, fontWeight: '700', marginBottom: 2 },
   pendingSub: { color: colors.textMuted, fontSize: 12, lineHeight: 18 },
