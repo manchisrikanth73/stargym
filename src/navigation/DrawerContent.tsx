@@ -84,7 +84,7 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
               disabled={disabled}
             >
               <Ionicons
-                name={isBasicLocked ? 'lock-closed-outline' : item.icon as any}
+                name={item.icon as any}
                 size={20}
                 color={disabled ? colors.textDim : (item.adminOnly ? colors.secondary : colors.textMuted)}
                 style={styles.itemIcon}
@@ -95,6 +95,9 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
                   <Text style={styles.premiumHint}>Premium & VIP only</Text>
                 )}
               </View>
+              {isBasicLocked && (
+                <Ionicons name="lock-closed" size={15} color={colors.error} />
+              )}
               {!item.screen && !isBasicLocked && <Text style={styles.comingSoon}>soon</Text>}
             </TouchableOpacity>
           );
