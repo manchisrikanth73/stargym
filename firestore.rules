@@ -15,6 +15,11 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    match /gymConfig/{docId} {
+      allow read:          if signedIn();
+      allow write:         if isAdmin();
+    }
+
     match /errorLogs/{logId} {
       allow create: if signedIn();
       allow read:   if isAdmin();
