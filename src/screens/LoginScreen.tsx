@@ -19,14 +19,17 @@ export default function LoginScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [dob, setDob] = useState('');
   const [gender, setGender] = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emailInUse, setEmailInUse] = useState(false);
 
   const clearError = () => { setError(null); setEmailInUse(false); };
+
 
   const handleSubmit = async () => {
     clearError();
@@ -36,6 +39,10 @@ export default function LoginScreen() {
     }
     if (isSignUp && !name.trim()) {
       setError('Please enter your full name.');
+      return;
+    }
+    if (isSignUp && password !== confirmPassword) {
+      setError('Passwords do not match.');
       return;
     }
     setLoading(true);
@@ -81,6 +88,7 @@ export default function LoginScreen() {
   const switchToSignIn = () => {
     setIsSignUp(false);
     setName('');
+    setConfirmPassword('');
     setDob('');
     setGender('');
     clearError();
@@ -182,6 +190,24 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Confirm password — sign up only */}
+          {isSignUp && (
+            <View style={[styles.inputWrap, confirmPassword && confirmPassword !== password && styles.inputError]}>
+              <Ionicons name="lock-closed-outline" size={18} color={confirmPassword && confirmPassword !== password ? colors.error : colors.textMuted} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                placeholder="Confirm Password"
+                placeholderTextColor={colors.textMuted}
+                secureTextEntry={!showConfirmPass}
+                value={confirmPassword}
+                onChangeText={t => { setConfirmPassword(t); clearError(); }}
+              />
+              <TouchableOpacity onPress={() => setShowConfirmPass(v => !v)} style={styles.eyeBtn}>
+                <Ionicons name={showConfirmPass ? 'eye-off-outline' : 'eye-outline'} size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Forgot password — sign in only */}
           {!isSignUp && (
             <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotBtn}>
@@ -229,7 +255,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           {/* Toggle */}
-          <TouchableOpacity onPress={() => { setIsSignUp(v => !v); setName(''); setDob(''); setGender(''); clearError(); }} style={styles.toggleBtn}>
+          <TouchableOpacity onPress={() => { setIsSignUp(v => !v); setName(''); setConfirmPassword(''); setDob(''); setGender(''); clearError(); }} style={styles.toggleBtn}>
             <Text style={styles.toggleText}>
               {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
               <Text style={styles.toggleLink}>{isSignUp ? 'Log In' : 'Sign Up'}</Text>
