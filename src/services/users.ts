@@ -26,6 +26,8 @@ export interface UserProfile {
   membershipType: MembershipType;
   isActive: boolean;
   joinedAt: Timestamp | null;
+  activationStartDate: string | null;
+  activationEndDate: string | null;
 }
 
 const usersRef = () => collection(db, 'users');

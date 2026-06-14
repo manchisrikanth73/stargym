@@ -38,12 +38,15 @@ export default function AdminUserDetailScreen() {
   const [phone, setPhone] = useState(existing?.phone ?? '');
   const [membershipType, setMembershipType] = useState<MembershipType>(existing?.membershipType ?? 'basic');
   const [isActive, setIsActive] = useState(existing?.isActive ?? true);
+  const [activationStartDate, setActivationStartDate] = useState(existing?.activationStartDate ?? '');
+  const [activationEndDate, setActivationEndDate]     = useState(existing?.activationEndDate ?? '');
   const [saving, setSaving] = useState(false);
 
   const validate = () => {
     const warn = (msg: string) => Platform.OS === 'web' ? (window as any).alert(msg) : Alert.alert('Required', msg);
     if (!displayName.trim()) { warn("Please enter the member's name."); return false; }
     if (isNew && !email.trim()) { warn("Please enter the member's email."); return false; }
+    if (!activationStartDate.trim()) { warn('Activation start date is required.'); return false; }
     return true;
   };
 
@@ -59,12 +62,16 @@ export default function AdminUserDetailScreen() {
     if (!validate()) return;
     setSaving(true);
     try {
+      const dates = {
+        activationStartDate: activationStartDate.trim() || null,
+        activationEndDate: activationEndDate.trim() || null,
+      };
       if (isNew) {
         const placeholderId = `manual_${Date.now()}`;
         await createUserProfile(placeholderId, email.trim(), displayName.trim());
-        await updateUserProfile(placeholderId, { phone, membershipType, isActive });
+        await updateUserProfile(placeholderId, { phone, membershipType, isActive, ...dates });
       } else {
-        await updateUserProfile(existing!.uid, { displayName: displayName.trim(), email: email.trim(), phone, membershipType, isActive });
+        await updateUserProfile(existing!.uid, { displayName: displayName.trim(), email: email.trim(), phone, membershipType, isActive, ...dates });
       }
       navigation.goBack();
     } catch (err: any) {
@@ -132,6 +139,26 @@ export default function AdminUserDetailScreen() {
             );
           })}
         </View>
+      </View>
+
+      {/* Activation Dates */}
+      <View style={styles.section}>
+        <Label>Activation Start Date *</Label>
+        <Field
+          icon="calendar-outline"
+          placeholder="YYYY-MM-DD"
+          value={activationStartDate}
+          onChangeText={setActivationStartDate}
+          keyboardType="numbers-and-punctuation"
+        />
+        <Label>Activation End Date</Label>
+        <Field
+          icon="calendar-outline"
+          placeholder="YYYY-MM-DD  (leave blank = open-ended)"
+          value={activationEndDate}
+          onChangeText={setActivationEndDate}
+          keyboardType="numbers-and-punctuation"
+        />
       </View>
 
       {/* Active toggle */}

@@ -25,6 +25,13 @@ const MEMBERSHIP_COLOR: Record<string, string> = {
   basic: colors.primary,
 };
 
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fmtDate = (d: string | null | undefined): string => {
+  if (!d) return '—';
+  const [y, m, day] = d.split('-');
+  return `${day} ${MONTHS[+m - 1]} ${y}`;
+};
+
 export default function AdminScreen() {
   const navigation = useNavigation<any>();
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -265,6 +272,13 @@ function MemberCard({ user, onEdit, onDelete }: { user: UserProfile; onEdit: () 
           </View>
           {user.phone ? <Text style={styles.phone}>{user.phone}</Text> : null}
         </View>
+        {user.activationStartDate ? (
+          <Text style={styles.activationDate}>
+            {fmtDate(user.activationStartDate)}
+            {' → '}
+            {user.activationEndDate ? fmtDate(user.activationEndDate) : 'Open-ended'}
+          </Text>
+        ) : null}
       </View>
 
       <View style={styles.actions}>
@@ -333,6 +347,7 @@ const styles = StyleSheet.create({
   membershipBadge: { borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
   membershipText: { fontSize: 10, fontWeight: '700' },
   phone: { color: colors.textMuted, fontSize: 11 },
+  activationDate: { color: colors.textDim, fontSize: 10, marginTop: 2 },
   actions: { gap: 8 },
   actionBtn: {
     width: 34, height: 34, borderRadius: 8,
