@@ -63,16 +63,21 @@ export default function AdminUserDetailScreen() {
     if (!validate()) return;
     setSaving(true);
     try {
+      const endDate = activationEndDate.trim() || null;
+      const today = new Date().toISOString().slice(0, 10);
+      const resolvedActive = endDate
+        ? endDate >= today
+        : isActive;
       const dates = {
         activationStartDate: activationStartDate.trim() || null,
-        activationEndDate: activationEndDate.trim() || null,
+        activationEndDate: endDate,
       };
       if (isNew) {
         const placeholderId = `manual_${Date.now()}`;
         await createUserProfile(placeholderId, email.trim(), displayName.trim());
-        await updateUserProfile(placeholderId, { phone, membershipType, isActive, ...dates });
+        await updateUserProfile(placeholderId, { phone, membershipType, isActive: resolvedActive, ...dates });
       } else {
-        await updateUserProfile(existing!.uid, { displayName: displayName.trim(), email: email.trim(), phone, membershipType, isActive, ...dates });
+        await updateUserProfile(existing!.uid, { displayName: displayName.trim(), email: email.trim(), phone, membershipType, isActive: resolvedActive, ...dates });
       }
       navigation.goBack();
     } catch (err: any) {
@@ -162,11 +167,20 @@ export default function AdminUserDetailScreen() {
         <View style={styles.toggleRow}>
           <View>
             <Text style={styles.toggleLabel}>Active Member</Text>
-            <Text style={styles.toggleSub}>Inactive members can't check in</Text>
+            <Text style={styles.toggleSub}>
+              {activationEndDate
+                ? activationEndDate >= new Date().toISOString().slice(0, 10)
+                  ? 'Auto-activated — end date is in the future'
+                  : 'Auto-deactivated — end date has passed'
+                : 'Inactive members can\'t check in'}
+            </Text>
           </View>
           <Switch
-            value={isActive}
-            onValueChange={setIsActive}
+            value={activationEndDate
+              ? activationEndDate >= new Date().toISOString().slice(0, 10)
+              : isActive}
+            onValueChange={activationEndDate ? undefined : setIsActive}
+            disabled={!!activationEndDate}
             trackColor={{ true: colors.primary, false: '#333' }}
             thumbColor="#fff"
           />
