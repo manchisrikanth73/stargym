@@ -44,8 +44,12 @@ export default function LoginScreen() {
         await signIn(email.trim(), password);
       }
     } catch (err: any) {
-      if (err.code === 'auth/email-already-in-use') {
-        setEmailInUse(true);
+      if (isSignUp && err.code === 'auth/email-already-in-use') {
+        try {
+          await signIn(email.trim(), password);
+        } catch {
+          setEmailInUse(true);
+        }
       } else {
         setError(friendlyError(err.code));
       }
