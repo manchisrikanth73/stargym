@@ -30,10 +30,14 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
   const name = user?.displayName ?? user?.email?.split('@')[0] ?? 'Athlete';
   const email = user?.email ?? '';
   const [isAdmin, setIsAdmin] = useState(false);
+  const [membershipType, setMembershipType] = useState<string>('basic');
 
   useEffect(() => {
     if (user?.uid) {
-      getUserProfile(user.uid).then(p => setIsAdmin(p?.role === 'admin'));
+      getUserProfile(user.uid).then(p => {
+        setIsAdmin(p?.role === 'admin');
+        setMembershipType(p?.membershipType ?? 'basic');
+      });
     }
   }, [user?.uid]);
 
@@ -64,28 +68,37 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
         <View style={styles.divider} />
 
         {/* Nav items */}
-        {visibleItems.map(item => (
-          <TouchableOpacity
-            key={item.label}
-            style={styles.item}
-            onPress={() => {
-              if (item.screen) {
-                props.navigation.closeDrawer();
-                props.navigation.navigate(item.screen as never);
-              }
-            }}
-            disabled={!item.screen}
-          >
-            <Ionicons
-              name={item.icon as any}
-              size={20}
-              color={item.screen ? (item.adminOnly ? colors.secondary : colors.textMuted) : colors.textDim}
-              style={styles.itemIcon}
-            />
-            <Text style={[styles.itemLabel, !item.screen && { color: colors.textDim }]}>{item.label}</Text>
-            {!item.screen && <Text style={styles.comingSoon}>soon</Text>}
-          </TouchableOpacity>
-        ))}
+        {visibleItems.map(item => {
+          const isBasicLocked = !isAdmin && item.label === 'Workouts' && membershipType === 'basic';
+          const disabled = !item.screen || isBasicLocked;
+          return (
+            <TouchableOpacity
+              key={item.label}
+              style={[styles.item, disabled && styles.itemDisabled]}
+              onPress={() => {
+                if (!disabled) {
+                  props.navigation.closeDrawer();
+                  props.navigation.navigate(item.screen as never);
+                }
+              }}
+              disabled={disabled}
+            >
+              <Ionicons
+                name={isBasicLocked ? 'lock-closed-outline' : item.icon as any}
+                size={20}
+                color={disabled ? colors.textDim : (item.adminOnly ? colors.secondary : colors.textMuted)}
+                style={styles.itemIcon}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.itemLabel, disabled && { color: colors.textDim }]}>{item.label}</Text>
+                {isBasicLocked && (
+                  <Text style={styles.premiumHint}>Premium & VIP only</Text>
+                )}
+              </View>
+              {!item.screen && !isBasicLocked && <Text style={styles.comingSoon}>soon</Text>}
+            </TouchableOpacity>
+          );
+        })}
 
         <View style={{ flex: 1 }} />
       </DrawerContentScrollView>
@@ -122,7 +135,9 @@ const styles = StyleSheet.create({
   item: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 20 },
   itemIcon: { marginRight: 16 },
   itemLabel: { color: colors.text, fontSize: 15, fontWeight: '500', flex: 1 },
+  itemDisabled: { opacity: 0.5 },
   comingSoon: { color: colors.textDim, fontSize: 10, fontWeight: '600' },
+  premiumHint: { color: colors.textDim, fontSize: 10, fontWeight: '600', marginTop: 1 },
   logoutBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 18, paddingHorizontal: 20 },
   logoutLabel: { color: colors.error, fontSize: 15, fontWeight: '600' },
 });

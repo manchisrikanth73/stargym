@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { useNavigation, DrawerActions, useFocusEffect } from '@react-navigation/native';
+import { auth } from '../services/firebase';
+import { getUserProfile } from '../services/users';
 import { colors } from '../theme/colors';
 
 const WORKOUTS = [
@@ -86,8 +88,24 @@ const BEGINNER_TIP = 'Strength training 3 days/week  +  Cardio 2 days/week  +  S
 export default function WorkoutsScreen() {
   const navigation = useNavigation<any>();
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [membershipType, setMembershipType] = useState<string>('basic');
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  useFocusEffect(useCallback(() => {
+    const uid = auth.currentUser?.uid;
+    if (uid) {
+      getUserProfile(uid).then(p => {
+        setMembershipType(p?.membershipType ?? 'basic');
+        setLoadingProfile(false);
+      });
+    } else {
+      setLoadingProfile(false);
+    }
+  }, []));
 
   const toggle = (id: string) => setExpanded(prev => prev === id ? null : id);
+
+  const isLocked = !loadingProfile && membershipType === 'basic';
 
   return (
     <View style={styles.root}>
@@ -99,6 +117,26 @@ export default function WorkoutsScreen() {
         <View style={{ width: 28 }} />
       </View>
 
+      {isLocked ? (
+        <View style={styles.lockedWrap}>
+          <View style={styles.lockedIconCircle}>
+            <Ionicons name="lock-closed" size={36} color={colors.textMuted} />
+          </View>
+          <Text style={styles.lockedTitle}>Premium & VIP Only</Text>
+          <Text style={styles.lockedDesc}>
+            Access to workout guides and training plans is available for Premium and VIP members.
+          </Text>
+          <View style={styles.planHints}>
+            <View style={[styles.planChip, { borderColor: '#9B59B644', backgroundColor: '#9B59B611' }]}>
+              <Text style={[styles.planChipText, { color: '#9B59B6' }]}>Premium</Text>
+            </View>
+            <View style={[styles.planChip, { borderColor: '#FFD70044', backgroundColor: '#FFD70011' }]}>
+              <Text style={[styles.planChipText, { color: '#FFD700' }]}>VIP</Text>
+            </View>
+          </View>
+          <Text style={styles.lockedSub}>Contact your gym admin to upgrade your membership.</Text>
+        </View>
+      ) : (
       <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
         {WORKOUTS.map((w, i) => {
           const open = expanded === w.id;
@@ -160,6 +198,7 @@ export default function WorkoutsScreen() {
 
         <View style={{ height: 32 }} />
       </ScrollView>
+      )}
     </View>
   );
 }
@@ -172,6 +211,23 @@ const styles = StyleSheet.create({
   },
   heading: { color: colors.text, fontSize: 20, fontWeight: '800' },
   list: { padding: 16, gap: 10 },
+  lockedWrap: {
+    flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40,
+  },
+  lockedIconCircle: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 20,
+  },
+  lockedTitle: { color: colors.text, fontSize: 20, fontWeight: '800', marginBottom: 12, textAlign: 'center' },
+  lockedDesc: { color: colors.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 22, marginBottom: 20 },
+  planHints: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  planChip: {
+    borderWidth: 1, borderRadius: 8,
+    paddingHorizontal: 14, paddingVertical: 6,
+  },
+  planChipText: { fontSize: 12, fontWeight: '800' },
+  lockedSub: { color: colors.textDim, fontSize: 12, textAlign: 'center' },
 
   card: {
     backgroundColor: colors.surface, borderRadius: 16,
