@@ -20,7 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Check In', icon: 'qr-code-outline', screen: 'Checkin', memberOnly: true },
   { label: 'Attendance', icon: 'calendar-outline', screen: 'Calendar', memberOnly: true },
   { label: 'Members', icon: 'people-outline', screen: 'Admin', adminOnly: true },
-  { label: 'Workouts', icon: 'barbell-outline', screen: 'Workouts' },
+  { label: 'Workouts', icon: 'barbell-outline', screen: 'Workouts', memberOnly: true },
   { label: 'Progress', icon: 'bar-chart-outline', screen: null },
   { label: 'Settings', icon: 'settings-outline', screen: 'Settings' },
 ];
