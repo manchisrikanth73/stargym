@@ -7,6 +7,12 @@ export type MembershipPrices = {
   vip: number;
 };
 
+export type WorkoutAccess = {
+  basic: boolean;
+  premium: boolean;
+  vip: boolean;
+};
+
 const settingsRef = () => doc(db, 'gymConfig', 'membership');
 
 export async function getMembershipPrices(): Promise<MembershipPrices> {
@@ -18,4 +24,19 @@ export async function getMembershipPrices(): Promise<MembershipPrices> {
 
 export async function setMembershipPrices(prices: MembershipPrices): Promise<void> {
   await setDoc(settingsRef(), prices, { merge: true });
+}
+
+export async function getWorkoutAccess(): Promise<WorkoutAccess> {
+  const snap = await getDoc(settingsRef());
+  if (!snap.exists()) return { basic: false, premium: true, vip: true };
+  const d = snap.data()?.workoutAccess ?? {};
+  return {
+    basic:   d.basic   ?? false,
+    premium: d.premium ?? true,
+    vip:     d.vip     ?? true,
+  };
+}
+
+export async function setWorkoutAccess(access: WorkoutAccess): Promise<void> {
+  await setDoc(settingsRef(), { workoutAccess: access }, { merge: true });
 }

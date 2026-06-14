@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, DrawerActions, useFocusEffect } from '@react-navigation/native';
 import { auth } from '../services/firebase';
 import { getUserProfile } from '../services/users';
+import { getWorkoutAccess } from '../services/gymSettings';
 import { colors } from '../theme/colors';
 
 const WORKOUTS = [
@@ -90,13 +91,16 @@ export default function WorkoutsScreen() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [membershipType, setMembershipType] = useState<string>('basic');
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [isLocked, setIsLocked] = useState(false);
 
   useFocusEffect(useCallback(() => {
     const uid = auth.currentUser?.uid;
     if (uid) {
-      getUserProfile(uid).then(p => {
-        setMembershipType(p?.membershipType ?? 'basic');
+      Promise.all([getUserProfile(uid), getWorkoutAccess()]).then(([p, wa]) => {
+        const plan = p?.membershipType ?? 'basic';
+        setMembershipType(plan);
         setLoadingProfile(false);
+        setIsLocked(!wa[plan as keyof typeof wa]);
       });
     } else {
       setLoadingProfile(false);
@@ -104,8 +108,6 @@ export default function WorkoutsScreen() {
   }, []));
 
   const toggle = (id: string) => setExpanded(prev => prev === id ? null : id);
-
-  const isLocked = !loadingProfile && membershipType === 'basic';
 
   return (
     <View style={styles.root}>

@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { auth } from '../services/firebase';
 import { logOut } from '../services/auth';
 import { getUserProfile } from '../services/users';
+import { getWorkoutAccess, WorkoutAccess } from '../services/gymSettings';
 import { colors } from '../theme/colors';
 
 type NavItem = { label: string; icon: string; screen: string | null; adminOnly?: boolean; memberOnly?: boolean };
@@ -31,12 +32,14 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
   const email = user?.email ?? '';
   const [isAdmin, setIsAdmin] = useState(false);
   const [membershipType, setMembershipType] = useState<string>('basic');
+  const [workoutAccess, setWorkoutAccess] = useState<WorkoutAccess>({ basic: false, premium: true, vip: true });
 
   useEffect(() => {
     if (user?.uid) {
-      getUserProfile(user.uid).then(p => {
+      Promise.all([getUserProfile(user.uid), getWorkoutAccess()]).then(([p, wa]) => {
         setIsAdmin(p?.role === 'admin');
         setMembershipType(p?.membershipType ?? 'basic');
+        setWorkoutAccess(wa);
       });
     }
   }, [user?.uid]);
@@ -69,7 +72,7 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
 
         {/* Nav items */}
         {visibleItems.map(item => {
-          const isBasicLocked = !isAdmin && item.label === 'Workouts' && membershipType === 'basic';
+          const isBasicLocked = !isAdmin && item.label === 'Workouts' && !workoutAccess[membershipType as keyof WorkoutAccess];
           const disabled = !item.screen || isBasicLocked;
           return (
             <TouchableOpacity

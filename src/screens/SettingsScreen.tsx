@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  ScrollView, ActivityIndicator, Platform,
+  ScrollView, ActivityIndicator, Platform, Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
 import { updateProfile } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import { getUserProfile, updateUserProfile } from '../services/users';
-import { getMembershipPrices, setMembershipPrices, MembershipPrices } from '../services/gymSettings';
+import {
+  getMembershipPrices, setMembershipPrices, MembershipPrices,
+  getWorkoutAccess, setWorkoutAccess, WorkoutAccess,
+} from '../services/gymSettings';
 import { colors } from '../theme/colors';
 
 const MEMBERSHIP_OPTIONS: { key: keyof MembershipPrices; label: string; color: string }[] = [
@@ -36,6 +39,9 @@ export default function SettingsScreen() {
   const [editingPrices, setEditingPrices] = useState(false);
   const [savingPrices, setSavingPrices] = useState(false);
 
+  const [workoutAccess, setWorkoutAccessState] = useState<WorkoutAccess>({ basic: false, premium: true, vip: true });
+  const [savingAccess, setSavingAccess] = useState(false);
+
   useEffect(() => {
     (async () => {
       const profile = await getUserProfile(user.uid);
@@ -47,13 +53,28 @@ export default function SettingsScreen() {
       const admin = profile?.role === 'admin';
       setIsAdmin(admin);
       if (admin) {
-        const p = await getMembershipPrices();
+        const [p, wa] = await Promise.all([getMembershipPrices(), getWorkoutAccess()]);
         setPrices(p);
         setPricesDraft(p);
+        setWorkoutAccessState(wa);
       }
       setLoading(false);
     })();
   }, []);
+
+  const handleToggleAccess = async (key: keyof WorkoutAccess, value: boolean) => {
+    const updated = { ...workoutAccess, [key]: value };
+    setWorkoutAccessState(updated);
+    setSavingAccess(true);
+    try {
+      await setWorkoutAccess(updated);
+    } catch (err: any) {
+      notify('Error', err.message ?? 'Failed to save access setting.');
+      setWorkoutAccessState(workoutAccess);
+    } finally {
+      setSavingAccess(false);
+    }
+  };
 
   const notify = (title: string, msg: string) => {
     if (Platform.OS === 'web') (window as any).alert(`${title}\n\n${msg}`);
@@ -229,6 +250,38 @@ export default function SettingsScreen() {
             </>
           )}
 
+          {/* Workout Access — admin only */}
+          {isAdmin && (
+            <>
+              <Text style={[styles.sectionLabel, { marginTop: 4 }]}>Workout Access</Text>
+              <View style={styles.card}>
+                <View style={styles.accessHeader}>
+                  <Ionicons name="barbell-outline" size={16} color={colors.textMuted} />
+                  <Text style={styles.priceHeaderLabel}>Allow access by plan</Text>
+                  {savingAccess && <ActivityIndicator size="small" color={colors.primary} />}
+                </View>
+                {MEMBERSHIP_OPTIONS.map(({ key, label, color }, i) => (
+                  <React.Fragment key={key}>
+                    {i > 0 && <View style={styles.fieldDivider} />}
+                    <View style={styles.accessRow}>
+                      <View style={[styles.membershipDot, { backgroundColor: `${color}22` }]}>
+                        <Text style={[styles.membershipDotText, { color }]}>{label[0]}</Text>
+                      </View>
+                      <Text style={styles.priceLabel}>{label}</Text>
+                      <Switch
+                        value={workoutAccess[key]}
+                        onValueChange={v => handleToggleAccess(key, v)}
+                        trackColor={{ true: color, false: '#333' }}
+                        thumbColor="#fff"
+                        disabled={savingAccess}
+                      />
+                    </View>
+                  </React.Fragment>
+                ))}
+              </View>
+            </>
+          )}
+
         </ScrollView>
       )}
     </View>
@@ -345,4 +398,13 @@ const styles = StyleSheet.create({
   },
   currencySymbol: { color: colors.textMuted, fontSize: 15 },
   priceInput: { color: colors.text, fontSize: 15, minWidth: 60 },
+  accessHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 16, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  accessRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingVertical: 12, gap: 12,
+  },
 });
