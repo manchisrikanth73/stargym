@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { createUserProfile, updateUserProfile, UserProfile, MemberRole, MembershipType } from '../services/users';
+import { createUserProfile, updateUserProfile, UserProfile, MembershipType } from '../services/users';
 import { colors } from '../theme/colors';
 
 type RouteParams = {
@@ -37,7 +37,6 @@ export default function AdminUserDetailScreen() {
   const [email, setEmail] = useState(existing?.email ?? '');
   const [phone, setPhone] = useState(existing?.phone ?? '');
   const [membershipType, setMembershipType] = useState<MembershipType>(existing?.membershipType ?? 'basic');
-  const [role, setRole] = useState<MemberRole>(existing?.role ?? 'member');
   const [isActive, setIsActive] = useState(existing?.isActive ?? true);
   const [saving, setSaving] = useState(false);
 
@@ -63,9 +62,9 @@ export default function AdminUserDetailScreen() {
       if (isNew) {
         const placeholderId = `manual_${Date.now()}`;
         await createUserProfile(placeholderId, email.trim(), displayName.trim());
-        await updateUserProfile(placeholderId, { phone, membershipType, role, isActive });
+        await updateUserProfile(placeholderId, { phone, membershipType, isActive });
       } else {
-        await updateUserProfile(existing!.uid, { displayName: displayName.trim(), email: email.trim(), phone, membershipType, role, isActive });
+        await updateUserProfile(existing!.uid, { displayName: displayName.trim(), email: email.trim(), phone, membershipType, isActive });
       }
       navigation.goBack();
     } catch (err: any) {
@@ -129,25 +128,6 @@ export default function AdminUserDetailScreen() {
                 onPress={() => setMembershipType(opt)}
               >
                 <Text style={[styles.optionText, selected && { color }]}>{opt.toUpperCase()}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      {/* Role */}
-      <View style={styles.section}>
-        <Label>Role</Label>
-        <View style={styles.optionRow}>
-          {(['member', 'admin'] as MemberRole[]).map(r => {
-            const selected = role === r;
-            return (
-              <TouchableOpacity
-                key={r}
-                style={[styles.optionBtn, selected && { backgroundColor: `${colors.primary}22`, borderColor: colors.primary }]}
-                onPress={() => setRole(r)}
-              >
-                <Text style={[styles.optionText, selected && { color: colors.primary }]}>{r.toUpperCase()}</Text>
               </TouchableOpacity>
             );
           })}
