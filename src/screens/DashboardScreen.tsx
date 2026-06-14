@@ -70,6 +70,13 @@ export default function DashboardScreen() {
 
   useEffect(() => { loadStats(); }, [loadStats]);
 
+  // When app is opened via gym QR code URL (?checkin=...), go straight to check-in
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const code = new URLSearchParams(window.location.search).get('checkin');
+    if (code) navigation.navigate('Checkin' as never);
+  }, []);
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadStats();
@@ -222,9 +229,14 @@ export default function DashboardScreen() {
             <Text style={styles.qrModalTitle}>Gym Check-In QR Code</Text>
             <Text style={styles.qrModalSub}>Print and display at the gym entrance</Text>
             <View style={styles.qrBox}>
-              <QRCode value={GYM_CHECKIN_CODE} size={200} color="#000" backgroundColor="#fff" ecl="H" />
+              <QRCode
+                value={typeof window !== 'undefined'
+                  ? `${window.location.origin}/?checkin=${GYM_CHECKIN_CODE}`
+                  : GYM_CHECKIN_CODE}
+                size={200} color="#000" backgroundColor="#fff" ecl="H"
+              />
             </View>
-            <Text style={styles.qrCodeText}>{GYM_CHECKIN_CODE}</Text>
+            <Text style={styles.qrCodeText}>Scan with phone camera to check in</Text>
             <TouchableOpacity style={styles.qrCloseBtn} onPress={() => setShowGymQR(false)}>
               <Text style={styles.qrCloseBtnText}>Close</Text>
             </TouchableOpacity>
