@@ -28,13 +28,13 @@ export interface UserProfile {
   joinedAt: Timestamp | null;
   activationStartDate: string | null;
   activationEndDate: string | null;
-  dob: string | null;
+  age: number | null;
   gender: string | null;
 }
 
 const usersRef = () => collection(db, 'users');
 
-export async function createUserProfile(uid: string, email: string, displayName: string, dob = '', gender = '') {
+export async function createUserProfile(uid: string, email: string, displayName: string, age: number | null = null, gender = '') {
   await setDoc(doc(usersRef(), uid), {
     uid,
     email,
@@ -46,7 +46,7 @@ export async function createUserProfile(uid: string, email: string, displayName:
     joinedAt: serverTimestamp(),
     activationStartDate: null,
     activationEndDate: null,
-    dob: dob || null,
+    age: age ?? null,
     gender: gender || null,
   });
 }

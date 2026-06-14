@@ -37,7 +37,7 @@ export default function AdminUserDetailScreen() {
   const [displayName, setDisplayName] = useState(existing?.displayName ?? '');
   const [email, setEmail] = useState(existing?.email ?? '');
   const [phone, setPhone] = useState(existing?.phone ?? '');
-  const [dob, setDob] = useState(existing?.dob ?? '');
+  const [age, setAge] = useState(existing?.age != null ? String(existing.age) : '');
   const [gender, setGender] = useState(existing?.gender ?? '');
   const [membershipType, setMembershipType] = useState<MembershipType>(existing?.membershipType ?? 'basic');
   const [isActive, setIsActive] = useState(existing?.isActive ?? true);
@@ -76,13 +76,14 @@ export default function AdminUserDetailScreen() {
         activationStartDate: activationStartDate.trim() || null,
         activationEndDate: endDate,
       };
+      const parsedAge = age.trim() ? parseInt(age.trim(), 10) : null;
       const personalData = {
-        dob: dob.trim() || null,
+        age: parsedAge,
         gender: gender || null,
       };
       if (isNew) {
         const placeholderId = `manual_${Date.now()}`;
-        await createUserProfile(placeholderId, email.trim(), displayName.trim(), dob.trim(), gender);
+        await createUserProfile(placeholderId, email.trim(), displayName.trim(), parsedAge, gender);
         await updateUserProfile(placeholderId, { phone, membershipType, isActive: resolvedActive, ...dates });
       } else {
         await updateUserProfile(existing!.uid, { displayName: displayName.trim(), email: email.trim(), phone, membershipType, isActive: resolvedActive, ...dates, ...personalData });
@@ -134,8 +135,8 @@ export default function AdminUserDetailScreen() {
         <Label>Phone</Label>
         <Field icon="call-outline" placeholder="+1 234 567 8900" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
 
-        <Label>Date of Birth</Label>
-        <DateInput label="" value={dob} onChange={setDob} />
+        <Label>Age</Label>
+        <Field icon="person-outline" placeholder="e.g. 25" value={age} onChangeText={t => setAge(t.replace(/[^0-9]/g, ''))} keyboardType="number-pad" />
 
         <Label>Gender</Label>
         <View style={styles.optionRow}>

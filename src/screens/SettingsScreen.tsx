@@ -33,7 +33,7 @@ export default function SettingsScreen() {
   const [lastName, setLastName]   = useState('');
   const [email, setEmail]         = useState('');
   const [phone, setPhone]         = useState('');
-  const [dob, setDob]             = useState('');
+  const [age, setAge]             = useState('');
   const [gender, setGender]       = useState('');
   const [original, setOriginal] = useState({ firstName: '', lastName: '', email: '', phone: '' });
 
@@ -53,7 +53,7 @@ export default function SettingsScreen() {
       const em = profile?.email ?? user.email ?? '';
       const ph = profile?.phone ?? '';
       setFirstName(fn); setLastName(ln); setEmail(em); setPhone(ph);
-      setDob(profile?.dob ?? '');
+      setAge(profile?.age != null ? String(profile.age) : '');
       setGender(profile?.gender ?? '');
       setOriginal({ firstName: fn, lastName: ln, email: em, phone: ph });
       const admin = profile?.role === 'admin';
@@ -165,7 +165,7 @@ export default function SettingsScreen() {
               </>
             )}
             <View style={styles.fieldDivider} />
-            <Field label="Date of Birth" value={dob || '—'} onChange={() => {}} editable={false} />
+            <Field label="Age" value={age || '—'} onChange={() => {}} editable={false} />
             <View style={styles.fieldDivider} />
             <Field label="Gender" value={gender || '—'} onChange={() => {}} editable={false} />
           </View>

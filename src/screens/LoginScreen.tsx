@@ -20,7 +20,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [dob, setDob] = useState('');
+  const [age, setAge] = useState('');
   const [gender, setGender] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
@@ -48,7 +48,8 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       if (isSignUp) {
-        await signUp(email.trim(), password, name.trim(), dob.trim(), gender);
+        const parsedAge = age.trim() ? parseInt(age.trim(), 10) : null;
+        await signUp(email.trim(), password, name.trim(), parsedAge, gender);
       } else {
         await signIn(email.trim(), password);
       }
@@ -89,7 +90,7 @@ export default function LoginScreen() {
     setIsSignUp(false);
     setName('');
     setConfirmPassword('');
-    setDob('');
+    setAge('');
     setGender('');
     clearError();
   };
@@ -136,14 +137,15 @@ export default function LoginScreen() {
                 />
               </View>
               <View style={styles.inputWrap}>
-                <Ionicons name="calendar-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+                <Ionicons name="person-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Date of Birth (YYYY-MM-DD)"
+                  placeholder="Age"
                   placeholderTextColor={colors.textMuted}
-                  keyboardType="numbers-and-punctuation"
-                  value={dob}
-                  onChangeText={t => { setDob(t); clearError(); }}
+                  keyboardType="number-pad"
+                  maxLength={3}
+                  value={age}
+                  onChangeText={t => { setAge(t.replace(/[^0-9]/g, '')); clearError(); }}
                 />
               </View>
               <View style={styles.genderRow}>
@@ -255,7 +257,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           {/* Toggle */}
-          <TouchableOpacity onPress={() => { setIsSignUp(v => !v); setName(''); setConfirmPassword(''); setDob(''); setGender(''); clearError(); }} style={styles.toggleBtn}>
+          <TouchableOpacity onPress={() => { setIsSignUp(v => !v); setName(''); setConfirmPassword(''); setAge(''); setGender(''); clearError(); }} style={styles.toggleBtn}>
             <Text style={styles.toggleText}>
               {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
               <Text style={styles.toggleLink}>{isSignUp ? 'Log In' : 'Sign Up'}</Text>
