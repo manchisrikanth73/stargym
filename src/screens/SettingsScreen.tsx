@@ -33,6 +33,7 @@ export default function SettingsScreen() {
   const [lastName, setLastName]   = useState('');
   const [email, setEmail]         = useState('');
   const [phone, setPhone]         = useState('');
+  const [original, setOriginal] = useState({ firstName: '', lastName: '', email: '', phone: '' });
 
   const [prices, setPrices] = useState<MembershipPrices>({ basic: 0, premium: 0, vip: 0 });
   const [pricesDraft, setPricesDraft] = useState<MembershipPrices>({ basic: 0, premium: 0, vip: 0 });
@@ -46,10 +47,12 @@ export default function SettingsScreen() {
     (async () => {
       const profile = await getUserProfile(user.uid);
       const parts = (profile?.displayName ?? user.displayName ?? '').split(' ');
-      setFirstName(parts[0] ?? '');
-      setLastName(parts.slice(1).join(' '));
-      setEmail(profile?.email ?? user.email ?? '');
-      setPhone(profile?.phone ?? '');
+      const fn = parts[0] ?? '';
+      const ln = parts.slice(1).join(' ');
+      const em = profile?.email ?? user.email ?? '';
+      const ph = profile?.phone ?? '';
+      setFirstName(fn); setLastName(ln); setEmail(em); setPhone(ph);
+      setOriginal({ firstName: fn, lastName: ln, email: em, phone: ph });
       const admin = profile?.role === 'admin';
       setIsAdmin(admin);
       if (admin) {
@@ -96,6 +99,7 @@ export default function SettingsScreen() {
         update.phone = phone.trim();
       }
       await updateUserProfile(user.uid, update);
+      setOriginal({ firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), phone: phone.trim() });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
@@ -170,24 +174,6 @@ export default function SettingsScreen() {
               </>
             )}
           </View>
-
-          {success && (
-            <View style={styles.successBox}>
-              <Ionicons name="checkmark-circle-outline" size={18} color={colors.success} />
-              <Text style={styles.successText}>Profile updated successfully.</Text>
-            </View>
-          )}
-
-          <TouchableOpacity
-            style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            {saving
-              ? <ActivityIndicator color="#000" size="small" />
-              : <Text style={styles.saveBtnText}>Save Changes</Text>
-            }
-          </TouchableOpacity>
 
           {/* Membership Config — admin only */}
           {isAdmin && (
@@ -278,6 +264,41 @@ export default function SettingsScreen() {
             </>
           )}
 
+          {/* Success banner */}
+          {success && (
+            <View style={styles.successBox}>
+              <Ionicons name="checkmark-circle-outline" size={18} color={colors.success} />
+              <Text style={styles.successText}>Profile updated successfully.</Text>
+            </View>
+          )}
+
+          {/* Bottom action buttons */}
+          <View style={styles.bottomActions}>
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              onPress={() => {
+                setFirstName(original.firstName);
+                setLastName(original.lastName);
+                setEmail(original.email);
+                setPhone(original.phone);
+              }}
+              disabled={saving}
+            >
+              <Text style={styles.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              {saving
+                ? <ActivityIndicator color="#000" size="small" />
+                : <Text style={styles.saveBtnText}>Save Changes</Text>
+              }
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ height: 32 }} />
         </ScrollView>
       )}
     </View>
@@ -358,8 +379,17 @@ const styles = StyleSheet.create({
     borderRadius: 10, padding: 12, marginBottom: 16,
   },
   successText: { color: colors.success, fontSize: 13 },
+  bottomActions: {
+    flexDirection: 'row', gap: 12, marginTop: 28,
+  },
+  cancelBtn: {
+    flex: 1, height: 52, borderRadius: 14,
+    borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cancelBtnText: { color: colors.text, fontSize: 16, fontWeight: '600' },
   saveBtn: {
-    height: 52, backgroundColor: colors.primary,
+    flex: 2, height: 52, backgroundColor: colors.primary,
     borderRadius: 14, alignItems: 'center', justifyContent: 'center',
   },
   saveBtnDisabled: { opacity: 0.5 },
