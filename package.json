@@ -43,7 +43,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:web": "EXPO_OFFLINE=1 npx expo export --platform web",
-    "serve": "node server.js"
+    "serve": "node server.js",
+    "gen-cert": "openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes -subj '/CN=192.168.1.110' 2>/dev/null && echo 'Cert generated! Now run: npm run serve'"
   },
   "private": true
 }
