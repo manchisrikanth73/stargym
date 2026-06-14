@@ -13,7 +13,7 @@ import { DrawerActions, useNavigation } from '@react-navigation/native';
 import dayjs from 'dayjs';
 import { auth } from '../services/firebase';
 import { isCheckedInToday, getMonthlyCount } from '../services/attendance';
-import { getUserProfile } from '../services/users';
+import { getUserProfile, getAllUsers } from '../services/users';
 import { colors } from '../theme/colors';
 
 const QUOTES = [
@@ -28,6 +28,9 @@ export default function DashboardScreen() {
   const [monthlyCount, setMonthlyCount] = useState(0);
   const [isActive, setIsActive] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [memberTotal, setMemberTotal] = useState(0);
+  const [memberActive, setMemberActive] = useState(0);
+  const [memberInactive, setMemberInactive] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
   const user = auth.currentUser;
@@ -51,7 +54,14 @@ export default function DashboardScreen() {
     setCheckedIn(ci);
     setMonthlyCount(mc);
     setIsActive(profile?.isActive ?? true);
-    setIsAdmin(profile?.role === 'admin');
+    const admin = profile?.role === 'admin';
+    setIsAdmin(admin);
+    if (admin) {
+      const all = await getAllUsers();
+      setMemberTotal(all.length);
+      setMemberActive(all.filter(u => u.isActive).length);
+      setMemberInactive(all.filter(u => !u.isActive).length);
+    }
   }, [user?.uid]);
 
   useEffect(() => { loadStats(); }, [loadStats]);
@@ -99,19 +109,42 @@ export default function DashboardScreen() {
         </Text>
       </View>
 
-      {/* Stats */}
-      <View style={styles.statsRow}>
-        <View style={[styles.statCard, { borderColor: `${colors.primary}44` }]}>
-          <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-          <Text style={[styles.statValue, { color: colors.primary }]}>{monthlyCount}</Text>
-          <Text style={styles.statLabel}>{monthName} Sessions</Text>
+      {/* Stats — admin sees member overview, members see session stats */}
+      {isAdmin ? (
+        <>
+          <Text style={styles.sectionTitle}>Member Overview</Text>
+          <View style={styles.statsRow}>
+            <View style={[styles.statCard, { borderColor: `${colors.primary}44` }]}>
+              <Ionicons name="people-outline" size={20} color={colors.primary} />
+              <Text style={[styles.statValue, { color: colors.primary }]}>{memberTotal}</Text>
+              <Text style={styles.statLabel}>Total</Text>
+            </View>
+            <View style={[styles.statCard, { borderColor: `${colors.success}44` }]}>
+              <Ionicons name="checkmark-circle-outline" size={20} color={colors.success} />
+              <Text style={[styles.statValue, { color: colors.success }]}>{memberActive}</Text>
+              <Text style={styles.statLabel}>Active</Text>
+            </View>
+            <View style={[styles.statCard, { borderColor: `${colors.textMuted}44` }]}>
+              <Ionicons name="pause-circle-outline" size={20} color={colors.textMuted} />
+              <Text style={[styles.statValue, { color: colors.textMuted }]}>{memberInactive}</Text>
+              <Text style={styles.statLabel}>Inactive</Text>
+            </View>
+          </View>
+        </>
+      ) : (
+        <View style={styles.statsRow}>
+          <View style={[styles.statCard, { borderColor: `${colors.primary}44` }]}>
+            <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+            <Text style={[styles.statValue, { color: colors.primary }]}>{monthlyCount}</Text>
+            <Text style={styles.statLabel}>{monthName} Sessions</Text>
+          </View>
+          <View style={[styles.statCard, { borderColor: `${colors.secondary}44` }]}>
+            <Ionicons name="flame-outline" size={20} color={colors.secondary} />
+            <Text style={[styles.statValue, { color: colors.secondary }]}>{checkedIn ? '🔥' : '—'}</Text>
+            <Text style={styles.statLabel}>Today</Text>
+          </View>
         </View>
-        <View style={[styles.statCard, { borderColor: `${colors.secondary}44` }]}>
-          <Ionicons name="flame-outline" size={20} color={colors.secondary} />
-          <Text style={[styles.statValue, { color: colors.secondary }]}>{checkedIn ? '🔥' : '—'}</Text>
-          <Text style={styles.statLabel}>Today</Text>
-        </View>
-      </View>
+      )}
 
       {/* Check-In Card — members only */}
       {!isAdmin && (
@@ -137,12 +170,21 @@ export default function DashboardScreen() {
       {/* Quick Actions */}
       <Text style={styles.sectionTitle}>Quick Actions</Text>
       <View style={styles.actionsRow}>
-        <ActionButton
-          icon="calendar-month"
-          label="Attendance"
-          color={colors.primary}
-          onPress={() => navigation.navigate('Calendar')}
-        />
+        {isAdmin ? (
+          <ActionButton
+            icon="people-outline"
+            label="Members"
+            color={colors.primary}
+            onPress={() => navigation.navigate('Admin')}
+          />
+        ) : (
+          <ActionButton
+            icon="calendar-month"
+            label="Attendance"
+            color={colors.primary}
+            onPress={() => navigation.navigate('Calendar')}
+          />
+        )}
         <ActionButton icon="bar-chart" label="Progress" color="#9B59B6" onPress={() => Alert.alert('Coming soon!')} />
         <ActionButton icon="barbell" label="Workouts" color="#E74C3C" onPress={() => Alert.alert('Coming soon!')} />
       </View>
