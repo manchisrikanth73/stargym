@@ -30,6 +30,7 @@ export interface UserProfile {
   activationEndDate: string | null;
   age: number | null;
   gender: string | null;
+  scheduledDeleteAt: string | null;
 }
 
 const usersRef = () => collection(db, 'users');
@@ -70,6 +71,13 @@ export async function updateUserProfile(uid: string, data: Partial<UserProfile>)
 
 export async function deleteUserProfile(uid: string) {
   await deleteDoc(doc(usersRef(), uid));
+}
+
+export async function disableMember(uid: string): Promise<void> {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() + 60);
+  const scheduledDeleteAt = cutoff.toISOString().slice(0, 10);
+  await updateDoc(doc(usersRef(), uid), { isActive: false, scheduledDeleteAt });
 }
 
 export async function isCurrentUserAdmin(uid: string): Promise<boolean> {

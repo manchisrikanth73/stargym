@@ -10,14 +10,13 @@ import {
   ActivityIndicator,
   RefreshControl,
   Modal,
-  Alert,
-  Platform,
 } from 'react-native';
 import dayjs from 'dayjs';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, DrawerActions, useFocusEffect } from '@react-navigation/native';
 import QRCode from 'react-native-qrcode-svg';
 import { getAllUsers, deleteUserProfile, UserProfile } from '../services/users';
+const today = () => new Date().toISOString().slice(0, 10);
 import { getMemberCheckinHistory } from '../services/attendance';
 import { colors } from '../theme/colors';
 import { GYM_CHECKIN_CODE } from '../config';
@@ -42,8 +41,6 @@ export default function AdminScreen() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [confirmUser, setConfirmUser] = useState<UserProfile | null>(null);
   const [showGymQR, setShowGymQR] = useState(false);
   const [historyUser, setHistoryUser] = useState<UserProfile | null>(null);
   const [history, setHistory] = useState<{ date: string; checkedInAt: any }[]>([]);
@@ -52,15 +49,17 @@ export default function AdminScreen() {
   const load = useCallback(async () => {
     try {
       const all = await getAllUsers();
-      setUsers(all);
-      setFiltered(prev => {
-        const q = search.toLowerCase();
-        return q
-          ? all.filter(u => u.displayName?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q))
-          : all;
-      });
+      const t = today();
+      const expired = all.filter(u => u.scheduledDeleteAt && u.scheduledDeleteAt <= t);
+      if (expired.length > 0) {
+        await Promise.all(expired.map(u => deleteUserProfile(u.uid)));
+      }
+      const active = all.filter(u => !expired.some(e => e.uid === u.uid));
+      setUsers(active);
+      const q = search.toLowerCase();
+      setFiltered(q ? active.filter(u => u.displayName?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)) : active);
     } catch (err: any) {
-      Alert.alert('Error', 'Failed to load members: ' + err.message);
+      (window as any).alert('Failed to load members: ' + err.message);
     }
   }, [search]);
 
@@ -84,35 +83,6 @@ export default function AdminScreen() {
       u.displayName?.toLowerCase().includes(q) ||
       u.email?.toLowerCase().includes(q)
     ));
-  };
-
-  const handleDelete = async () => {
-    if (!confirmUser) return;
-    setDeleting(true);
-    try {
-      await deleteUserProfile(confirmUser.uid);
-      setConfirmUser(null);
-      await load();
-    } catch (err: any) {
-      setConfirmUser(null);
-      Alert.alert('Delete failed', err.message ?? 'Could not remove member. Check Firestore rules.');
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  const confirmDelete = (user: UserProfile) => {
-    if (Platform.OS === 'web') {
-      const name = user.displayName || user.email;
-      if (!(window as any).confirm(`Remove "${name}" from the members list?\n\nThis cannot be undone.`)) return;
-      setDeleting(true);
-      deleteUserProfile(user.uid)
-        .then(() => load())
-        .catch((err: any) => (window as any).alert('Delete failed: ' + (err.message ?? 'Unknown error')))
-        .finally(() => setDeleting(false));
-    } else {
-      setConfirmUser(user);
-    }
   };
 
   const openHistory = async (user: UserProfile) => {
@@ -189,49 +159,11 @@ export default function AdminScreen() {
             <MemberCard
               user={item}
               onEdit={() => navigation.navigate('AdminUserDetail', { user: item })}
-              onDelete={() => confirmDelete(item)}
               onHistory={() => openHistory(item)}
             />
           )}
         />
       )}
-
-      {/* Confirm delete modal */}
-      <Modal visible={!!confirmUser} transparent animationType="fade">
-        <View style={styles.overlay}>
-          <View style={styles.modal}>
-            <View style={styles.modalIcon}>
-              <Ionicons name="trash-outline" size={28} color={colors.error} />
-            </View>
-            <Text style={styles.modalTitle}>Remove Member?</Text>
-            <Text style={styles.modalBody}>
-              This will permanently remove{' '}
-              <Text style={{ color: colors.text, fontWeight: '700' }}>
-                {confirmUser?.displayName ?? confirmUser?.email}
-              </Text>{' '}
-              from the members list.
-            </Text>
-            <View style={styles.modalBtns}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => setConfirmUser(null)}
-                disabled={deleting}
-              >
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.deleteBtn}
-                onPress={handleDelete}
-                disabled={deleting}
-              >
-                {deleting
-                  ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={styles.deleteBtnText}>Remove</Text>}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* Check-in History modal */}
       <Modal visible={!!historyUser} transparent animationType="fade">
@@ -299,7 +231,7 @@ function StatChip({ label, value, color }: { label: string; value: number; color
   );
 }
 
-function MemberCard({ user, onEdit, onDelete, onHistory }: { user: UserProfile; onEdit: () => void; onDelete: () => void; onHistory: () => void }) {
+function MemberCard({ user, onEdit, onHistory }: { user: UserProfile; onEdit: () => void; onHistory: () => void }) {
   const memberColor = MEMBERSHIP_COLOR[user.membershipType] ?? colors.primary;
   const initials = user.displayName
     ? user.displayName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
@@ -320,6 +252,9 @@ function MemberCard({ user, onEdit, onDelete, onHistory }: { user: UserProfile; 
             )}
             {!user.isActive && (
               <View style={styles.inactiveBadge}><Text style={styles.inactiveBadgeText}>INACTIVE</Text></View>
+            )}
+            {user.scheduledDeleteAt && (
+              <View style={styles.deletionBadge}><Text style={styles.deletionBadgeText}>DELETES {fmtDate(user.scheduledDeleteAt)}</Text></View>
             )}
           </View>
           <Text style={styles.email} numberOfLines={1}>{user.email}</Text>
@@ -345,9 +280,6 @@ function MemberCard({ user, onEdit, onDelete, onHistory }: { user: UserProfile; 
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtnUpdate} onPress={onEdit}>
           <Text style={styles.actionBtnUpdateText}>Update</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtnDelete} onPress={onDelete}>
-          <Text style={styles.actionBtnDeleteText}>Delete</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -422,13 +354,9 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   actionBtnUpdateText: { color: colors.primary, fontSize: 11, fontWeight: '700' },
-  actionBtnDelete: {
-    flex: 1, height: 32, borderRadius: 8, borderWidth: 1,
-    borderColor: `${colors.error}44`, backgroundColor: `${colors.error}11`,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  actionBtnDeleteText: { color: colors.error, fontSize: 11, fontWeight: '700' },
-  // Confirm modal
+  deletionBadge: { backgroundColor: `${colors.error}22`, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 1 },
+  deletionBadgeText: { color: colors.error, fontSize: 9, fontWeight: '800' },
+  // Modals
   overlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.7)',
     alignItems: 'center', justifyContent: 'center', padding: 24,
@@ -437,24 +365,13 @@ const styles = StyleSheet.create({
     width: '100%', backgroundColor: colors.surface, borderRadius: 20,
     padding: 24, alignItems: 'center',
   },
-  modalIcon: {
-    width: 60, height: 60, borderRadius: 30,
-    backgroundColor: `${colors.error}22`, alignItems: 'center', justifyContent: 'center',
-    marginBottom: 16,
-  },
   modalTitle: { color: colors.text, fontSize: 20, fontWeight: '800', marginBottom: 10 },
   modalBody: { color: colors.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 22, marginBottom: 24 },
-  modalBtns: { flexDirection: 'row', gap: 12, width: '100%' },
   cancelBtn: {
     flex: 1, height: 48, borderRadius: 12, borderWidth: 1,
     borderColor: colors.border, alignItems: 'center', justifyContent: 'center',
   },
   cancelBtnText: { color: colors.text, fontSize: 15, fontWeight: '600' },
-  deleteBtn: {
-    flex: 1, height: 48, borderRadius: 12,
-    backgroundColor: colors.error, alignItems: 'center', justifyContent: 'center',
-  },
-  deleteBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   gymQrWrap: {
     backgroundColor: '#fff', padding: 20, borderRadius: 16,
     marginBottom: 14, alignItems: 'center',

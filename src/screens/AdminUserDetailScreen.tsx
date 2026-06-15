@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { createUserProfile, updateUserProfile, UserProfile, MembershipType } from '../services/users';
+import { createUserProfile, updateUserProfile, disableMember, UserProfile, MembershipType } from '../services/users';
 import DateInput from '../components/DateInput';
 import { colors } from '../theme/colors';
 
@@ -44,6 +44,7 @@ export default function AdminUserDetailScreen() {
   const [activationStartDate, setActivationStartDate] = useState(existing?.activationStartDate ?? '');
   const [activationEndDate, setActivationEndDate]     = useState(existing?.activationEndDate ?? '');
   const [saving, setSaving] = useState(false);
+  const [disabling, setDisabling] = useState(false);
 
   const GENDER_OPTIONS = ['Male', 'Female', 'Other'] as const;
 
@@ -60,6 +61,23 @@ export default function AdminUserDetailScreen() {
       (window as any).alert(`${title}\n\n${msg}`);
     } else {
       Alert.alert(title, msg);
+    }
+  };
+
+  const handleDisable = async () => {
+    const name = displayName.trim() || 'this member';
+    const confirmed = Platform.OS === 'web'
+      ? (window as any).confirm(`Disable ${name}?\n\nThey will be automatically removed after 60 days.`)
+      : true;
+    if (!confirmed) return;
+    setDisabling(true);
+    try {
+      await disableMember(existing!.uid);
+      navigation.goBack();
+    } catch (err: any) {
+      notify('Error', err.message ?? 'Failed to disable member.');
+    } finally {
+      setDisabling(false);
     }
   };
 
@@ -224,6 +242,19 @@ export default function AdminUserDetailScreen() {
         )}
       </TouchableOpacity>
 
+      {!isNew && (
+        <TouchableOpacity style={styles.disableBtn} onPress={handleDisable} disabled={disabling}>
+          {disabling ? (
+            <ActivityIndicator color={colors.error} />
+          ) : (
+            <>
+              <Ionicons name="ban-outline" size={18} color={colors.error} />
+              <Text style={styles.disableBtnText}>Disable Member</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
+
       <View style={{ height: 40 }} />
     </ScrollView>
   );
@@ -325,4 +356,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   saveBtnText: { color: '#000', fontSize: 16, fontWeight: '800' },
+  disableBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    height: 50,
+    borderRadius: 16,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: `${colors.error}55`,
+    backgroundColor: `${colors.error}11`,
+  },
+  disableBtnText: { color: colors.error, fontSize: 15, fontWeight: '700' },
 });
