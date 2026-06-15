@@ -274,7 +274,7 @@ function MemberCard({ user, onEdit, onHistory }: { user: UserProfile; onEdit: ()
 
       <View style={styles.actions}>
         <TouchableOpacity style={styles.actionBtnHistory} onPress={onHistory}>
-          <Text style={styles.actionBtnHistoryText}>History</Text>
+          <Text style={styles.actionBtnHistoryText}>Check-in{'\n'}History</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtnUpdate} onPress={onEdit}>
           <Text style={styles.actionBtnUpdateText}>Update</Text>
@@ -341,11 +341,11 @@ const styles = StyleSheet.create({
   activationDate: { color: colors.textDim, fontSize: 10, marginTop: 2 },
   actions: { flexDirection: 'column', gap: 5 },
   actionBtnHistory: {
-    height: 26, borderRadius: 6, borderWidth: 1, width: 64,
+    height: 36, borderRadius: 6, borderWidth: 1, width: 64,
     borderColor: `${colors.secondary}44`, backgroundColor: `${colors.secondary}11`,
     alignItems: 'center', justifyContent: 'center',
   },
-  actionBtnHistoryText: { color: colors.secondary, fontSize: 9, fontWeight: '700' },
+  actionBtnHistoryText: { color: colors.secondary, fontSize: 9, fontWeight: '700', textAlign: 'center', lineHeight: 13 },
   actionBtnUpdate: {
     height: 26, borderRadius: 6, borderWidth: 1, width: 64,
     borderColor: `${colors.primary}44`, backgroundColor: `${colors.primary}11`,
