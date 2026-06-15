@@ -164,10 +164,14 @@ export default function SettingsScreen() {
                 <Field label="Phone" value={phone} onChange={setPhone} placeholder="Phone number" keyboardType="phone-pad" />
               </>
             )}
-            <View style={styles.fieldDivider} />
-            <Field label="Age" value={age || '—'} onChange={() => {}} editable={false} />
-            <View style={styles.fieldDivider} />
-            <Field label="Gender" value={gender || '—'} onChange={() => {}} editable={false} />
+            {!isAdmin && (
+              <>
+                <View style={styles.fieldDivider} />
+                <Field label="Age" value={age || '—'} onChange={() => {}} editable={false} />
+                <View style={styles.fieldDivider} />
+                <Field label="Gender" value={gender || '—'} onChange={() => {}} editable={false} />
+              </>
+            )}
           </View>
 
           {/* Membership Config — admin only */}
