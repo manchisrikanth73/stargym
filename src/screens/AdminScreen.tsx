@@ -307,45 +307,47 @@ function MemberCard({ user, onEdit, onDelete, onHistory }: { user: UserProfile; 
 
   return (
     <View style={[styles.card, !user.isActive && styles.cardInactive]}>
-      <View style={[styles.avatar, { backgroundColor: `${memberColor}22`, borderColor: `${memberColor}55` }]}>
-        <Text style={[styles.avatarText, { color: memberColor }]}>{initials}</Text>
-      </View>
+      <View style={styles.cardTop}>
+        <View style={[styles.avatar, { backgroundColor: `${memberColor}22`, borderColor: `${memberColor}55` }]}>
+          <Text style={[styles.avatarText, { color: memberColor }]}>{initials}</Text>
+        </View>
 
-      <View style={styles.info}>
-        <View style={styles.nameRow}>
-          <Text style={styles.name}>{user.displayName || '—'}</Text>
-          {user.role === 'admin' && (
-            <View style={styles.adminBadge}><Text style={styles.adminBadgeText}>ADMIN</Text></View>
-          )}
-          {!user.isActive && (
-            <View style={styles.inactiveBadge}><Text style={styles.inactiveBadgeText}>INACTIVE</Text></View>
-          )}
-        </View>
-        <Text style={styles.email} numberOfLines={1}>{user.email}</Text>
-        <View style={styles.membershipRow}>
-          <View style={[styles.membershipBadge, { backgroundColor: `${memberColor}22` }]}>
-            <Text style={[styles.membershipText, { color: memberColor }]}>{user.membershipType?.toUpperCase()}</Text>
+        <View style={styles.info}>
+          <View style={styles.nameRow}>
+            <Text style={styles.name}>{user.displayName || '—'}</Text>
+            {user.role === 'admin' && (
+              <View style={styles.adminBadge}><Text style={styles.adminBadgeText}>ADMIN</Text></View>
+            )}
+            {!user.isActive && (
+              <View style={styles.inactiveBadge}><Text style={styles.inactiveBadgeText}>INACTIVE</Text></View>
+            )}
           </View>
-          {user.phone ? <Text style={styles.phone}>{user.phone}</Text> : null}
+          <Text style={styles.email} numberOfLines={1}>{user.email}</Text>
+          <View style={styles.membershipRow}>
+            <View style={[styles.membershipBadge, { backgroundColor: `${memberColor}22` }]}>
+              <Text style={[styles.membershipText, { color: memberColor }]}>{user.membershipType?.toUpperCase()}</Text>
+            </View>
+            {user.phone ? <Text style={styles.phone}>{user.phone}</Text> : null}
+          </View>
+          {user.activationStartDate ? (
+            <Text style={styles.activationDate}>
+              {fmtDate(user.activationStartDate)}
+              {' → '}
+              {user.activationEndDate ? fmtDate(user.activationEndDate) : 'Open-ended'}
+            </Text>
+          ) : null}
         </View>
-        {user.activationStartDate ? (
-          <Text style={styles.activationDate}>
-            {fmtDate(user.activationStartDate)}
-            {' → '}
-            {user.activationEndDate ? fmtDate(user.activationEndDate) : 'Open-ended'}
-          </Text>
-        ) : null}
       </View>
 
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.actionBtn} onPress={onHistory}>
-          <Ionicons name="time-outline" size={18} color={colors.secondary} />
+        <TouchableOpacity style={styles.actionBtnHistory} onPress={onHistory}>
+          <Text style={styles.actionBtnHistoryText}>Check-in History</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={onEdit}>
-          <Ionicons name="pencil-outline" size={18} color={colors.primary} />
+        <TouchableOpacity style={styles.actionBtnUpdate} onPress={onEdit}>
+          <Text style={styles.actionBtnUpdateText}>Update</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={onDelete}>
-          <Ionicons name="trash-outline" size={18} color={colors.error} />
+        <TouchableOpacity style={styles.actionBtnDelete} onPress={onDelete}>
+          <Text style={styles.actionBtnDeleteText}>Delete</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -384,11 +386,11 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', paddingTop: 60, gap: 12 },
   emptyText: { color: colors.textMuted, fontSize: 15 },
   card: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
-    borderRadius: 16, padding: 14, marginBottom: 10,
+    backgroundColor: colors.surface, borderRadius: 16, padding: 14, marginBottom: 10,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', gap: 12,
   },
   cardInactive: { opacity: 0.55 },
+  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: {
     width: 46, height: 46, borderRadius: 23,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1,
@@ -407,11 +409,25 @@ const styles = StyleSheet.create({
   membershipText: { fontSize: 10, fontWeight: '700' },
   phone: { color: colors.textMuted, fontSize: 11 },
   activationDate: { color: colors.textDim, fontSize: 10, marginTop: 2 },
-  actions: { gap: 8 },
-  actionBtn: {
-    width: 34, height: 34, borderRadius: 8,
-    backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center',
+  actions: { flexDirection: 'row', gap: 8 },
+  actionBtnHistory: {
+    flex: 1, height: 32, borderRadius: 8, borderWidth: 1,
+    borderColor: `${colors.secondary}44`, backgroundColor: `${colors.secondary}11`,
+    alignItems: 'center', justifyContent: 'center',
   },
+  actionBtnHistoryText: { color: colors.secondary, fontSize: 11, fontWeight: '700' },
+  actionBtnUpdate: {
+    flex: 1, height: 32, borderRadius: 8, borderWidth: 1,
+    borderColor: `${colors.primary}44`, backgroundColor: `${colors.primary}11`,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  actionBtnUpdateText: { color: colors.primary, fontSize: 11, fontWeight: '700' },
+  actionBtnDelete: {
+    flex: 1, height: 32, borderRadius: 8, borderWidth: 1,
+    borderColor: `${colors.error}44`, backgroundColor: `${colors.error}11`,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  actionBtnDeleteText: { color: colors.error, fontSize: 11, fontWeight: '700' },
   // Confirm modal
   overlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.7)',
