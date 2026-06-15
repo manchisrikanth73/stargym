@@ -70,6 +70,26 @@ export async function getMonthlyCount(year: number, month: number): Promise<numb
   return snap.size;
 }
 
+export async function getMemberCheckinHistory(
+  memberUid: string,
+  days = 60,
+): Promise<{ date: string; checkedInAt: Timestamp | null }[]> {
+  return withRetry('getMemberCheckinHistory', async () => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const q = query(
+      collection(db, 'users', memberUid, 'attendance'),
+      where('date', '>=', Timestamp.fromDate(cutoff)),
+      orderBy('date', 'desc'),
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({
+      date: d.id,
+      checkedInAt: (d.data().checkedInAt as Timestamp) ?? null,
+    }));
+  });
+}
+
 export type CheckinRecord = {
   uid: string;
   displayName: string;
