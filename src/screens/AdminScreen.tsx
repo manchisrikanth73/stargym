@@ -239,44 +239,42 @@ function MemberCard({ user, onEdit, onHistory }: { user: UserProfile; onEdit: ()
 
   return (
     <View style={[styles.card, !user.isActive && styles.cardInactive]}>
-      <View style={styles.cardTop}>
-        <View style={[styles.avatar, { backgroundColor: `${memberColor}22`, borderColor: `${memberColor}55` }]}>
-          <Text style={[styles.avatarText, { color: memberColor }]}>{initials}</Text>
-        </View>
+      <View style={[styles.avatar, { backgroundColor: `${memberColor}22`, borderColor: `${memberColor}55` }]}>
+        <Text style={[styles.avatarText, { color: memberColor }]}>{initials}</Text>
+      </View>
 
-        <View style={styles.info}>
-          <View style={styles.nameRow}>
-            <Text style={styles.name}>{user.displayName || '—'}</Text>
-            {user.role === 'admin' && (
-              <View style={styles.adminBadge}><Text style={styles.adminBadgeText}>ADMIN</Text></View>
-            )}
-            {!user.isActive && (
-              <View style={styles.inactiveBadge}><Text style={styles.inactiveBadgeText}>INACTIVE</Text></View>
-            )}
-            {user.scheduledDeleteAt && (
-              <View style={styles.deletionBadge}><Text style={styles.deletionBadgeText}>DELETES {fmtDate(user.scheduledDeleteAt)}</Text></View>
-            )}
-          </View>
-          <Text style={styles.email} numberOfLines={1}>{user.email}</Text>
-          <View style={styles.membershipRow}>
-            <View style={[styles.membershipBadge, { backgroundColor: `${memberColor}22` }]}>
-              <Text style={[styles.membershipText, { color: memberColor }]}>{user.membershipType?.toUpperCase()}</Text>
-            </View>
-            {user.phone ? <Text style={styles.phone}>{user.phone}</Text> : null}
-          </View>
-          {user.activationStartDate ? (
-            <Text style={styles.activationDate}>
-              {fmtDate(user.activationStartDate)}
-              {' → '}
-              {user.activationEndDate ? fmtDate(user.activationEndDate) : 'Open-ended'}
-            </Text>
-          ) : null}
+      <View style={styles.info}>
+        <View style={styles.nameRow}>
+          <Text style={styles.name}>{user.displayName || '—'}</Text>
+          {user.role === 'admin' && (
+            <View style={styles.adminBadge}><Text style={styles.adminBadgeText}>ADMIN</Text></View>
+          )}
+          {!user.isActive && (
+            <View style={styles.inactiveBadge}><Text style={styles.inactiveBadgeText}>INACTIVE</Text></View>
+          )}
+          {user.scheduledDeleteAt && (
+            <View style={styles.deletionBadge}><Text style={styles.deletionBadgeText}>DELETES {fmtDate(user.scheduledDeleteAt)}</Text></View>
+          )}
         </View>
+        <Text style={styles.email} numberOfLines={1}>{user.email}</Text>
+        <View style={styles.membershipRow}>
+          <View style={[styles.membershipBadge, { backgroundColor: `${memberColor}22` }]}>
+            <Text style={[styles.membershipText, { color: memberColor }]}>{user.membershipType?.toUpperCase()}</Text>
+          </View>
+          {user.phone ? <Text style={styles.phone}>{user.phone}</Text> : null}
+        </View>
+        {user.activationStartDate ? (
+          <Text style={styles.activationDate}>
+            {fmtDate(user.activationStartDate)}
+            {' → '}
+            {user.activationEndDate ? fmtDate(user.activationEndDate) : 'Open-ended'}
+          </Text>
+        ) : null}
       </View>
 
       <View style={styles.actions}>
         <TouchableOpacity style={styles.actionBtnHistory} onPress={onHistory}>
-          <Text style={styles.actionBtnHistoryText}>Check-in History</Text>
+          <Text style={styles.actionBtnHistoryText}>History</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtnUpdate} onPress={onEdit}>
           <Text style={styles.actionBtnUpdateText}>Update</Text>
@@ -318,16 +316,16 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', paddingTop: 60, gap: 12 },
   emptyText: { color: colors.textMuted, fontSize: 15 },
   card: {
+    flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.surface, borderRadius: 16, padding: 14, marginBottom: 10,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', gap: 12,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', gap: 10,
   },
   cardInactive: { opacity: 0.55 },
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: {
-    width: 46, height: 46, borderRadius: 23,
+    width: 42, height: 42, borderRadius: 21,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1,
   },
-  avatarText: { fontSize: 16, fontWeight: '800' },
+  avatarText: { fontSize: 14, fontWeight: '800' },
   info: { flex: 1, gap: 3 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   name: { color: colors.text, fontSize: 15, fontWeight: '700' },
@@ -341,19 +339,19 @@ const styles = StyleSheet.create({
   membershipText: { fontSize: 10, fontWeight: '700' },
   phone: { color: colors.textMuted, fontSize: 11 },
   activationDate: { color: colors.textDim, fontSize: 10, marginTop: 2 },
-  actions: { flexDirection: 'row', gap: 6 },
+  actions: { flexDirection: 'column', gap: 5 },
   actionBtnHistory: {
-    flex: 1, height: 28, borderRadius: 6, borderWidth: 1,
+    height: 26, borderRadius: 6, borderWidth: 1, width: 64,
     borderColor: `${colors.secondary}44`, backgroundColor: `${colors.secondary}11`,
     alignItems: 'center', justifyContent: 'center',
   },
-  actionBtnHistoryText: { color: colors.secondary, fontSize: 10, fontWeight: '700' },
+  actionBtnHistoryText: { color: colors.secondary, fontSize: 9, fontWeight: '700' },
   actionBtnUpdate: {
-    flex: 1, height: 28, borderRadius: 6, borderWidth: 1,
+    height: 26, borderRadius: 6, borderWidth: 1, width: 64,
     borderColor: `${colors.primary}44`, backgroundColor: `${colors.primary}11`,
     alignItems: 'center', justifyContent: 'center',
   },
-  actionBtnUpdateText: { color: colors.primary, fontSize: 10, fontWeight: '700' },
+  actionBtnUpdateText: { color: colors.primary, fontSize: 9, fontWeight: '700' },
   deletionBadge: { backgroundColor: `${colors.error}22`, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 1 },
   deletionBadgeText: { color: colors.error, fontSize: 9, fontWeight: '800' },
   // Modals
