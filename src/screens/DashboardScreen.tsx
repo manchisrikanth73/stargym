@@ -287,7 +287,10 @@ export default function DashboardScreen() {
             onPress={() => navigation.navigate('Calendar')}
           />
         )}
-        <ActionButton icon="bar-chart" label="Progress" color="#9B59B6" onPress={() => Alert.alert('Coming soon!')} />
+        {isAdmin
+          ? <ActionButton icon="settings-outline" label="Settings" color="#9B59B6" onPress={() => navigation.navigate('Settings')} />
+          : <ActionButton icon="bar-chart" label="Progress" color="#9B59B6" onPress={() => Alert.alert('Coming soon!')} />
+        }
         <ActionButton icon="barbell" label="Workouts" color="#E74C3C" onPress={() => Alert.alert('Coming soon!')} />
       </View>
 
