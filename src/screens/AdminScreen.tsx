@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   FlatList,
+  ScrollView,
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
@@ -12,10 +13,12 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import dayjs from 'dayjs';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, DrawerActions, useFocusEffect } from '@react-navigation/native';
 import QRCode from 'react-native-qrcode-svg';
 import { getAllUsers, deleteUserProfile, UserProfile } from '../services/users';
+import { getMemberCheckinHistory } from '../services/attendance';
 import { colors } from '../theme/colors';
 import { GYM_CHECKIN_CODE } from '../config';
 
@@ -42,6 +45,9 @@ export default function AdminScreen() {
   const [deleting, setDeleting] = useState(false);
   const [confirmUser, setConfirmUser] = useState<UserProfile | null>(null);
   const [showGymQR, setShowGymQR] = useState(false);
+  const [historyUser, setHistoryUser] = useState<UserProfile | null>(null);
+  const [history, setHistory] = useState<{ date: string; checkedInAt: any }[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -109,6 +115,20 @@ export default function AdminScreen() {
     }
   };
 
+  const openHistory = async (user: UserProfile) => {
+    setHistoryUser(user);
+    setHistory([]);
+    setHistoryLoading(true);
+    try {
+      const data = await getMemberCheckinHistory(user.uid);
+      setHistory(data);
+    } catch (err: any) {
+      (window as any).alert('Failed to load history: ' + (err.message ?? 'Unknown error'));
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   const activeCount = users.filter(u => u.isActive).length;
 
   return (
@@ -170,6 +190,7 @@ export default function AdminScreen() {
               user={item}
               onEdit={() => navigation.navigate('AdminUserDetail', { user: item })}
               onDelete={() => confirmDelete(item)}
+              onHistory={() => openHistory(item)}
             />
           )}
         />
@@ -212,6 +233,41 @@ export default function AdminScreen() {
         </View>
       </Modal>
 
+      {/* Check-in History modal */}
+      <Modal visible={!!historyUser} transparent animationType="fade">
+        <View style={styles.overlay}>
+          <View style={[styles.modal, { maxHeight: '80%' }]}>
+            <View style={styles.historyModalHeader}>
+              <Text style={styles.modalTitle}>{historyUser?.displayName || historyUser?.email}</Text>
+              <Text style={styles.historySubtitle}>Last 60 Days Check-in History</Text>
+            </View>
+            {historyLoading ? (
+              <ActivityIndicator color={colors.primary} style={{ marginVertical: 24 }} />
+            ) : (
+              <ScrollView style={{ width: '100%' }} showsVerticalScrollIndicator={false}>
+                {history.length === 0 ? (
+                  <Text style={styles.historyEmpty}>No check-ins in the last 60 days.</Text>
+                ) : (
+                  history.map((item, i) => {
+                    const time = item.checkedInAt ? dayjs(item.checkedInAt.toDate()).format('h:mm A') : '—';
+                    return (
+                      <View key={item.date} style={[styles.historyRow, i < history.length - 1 && styles.historyRowBorder]}>
+                        <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                        <Text style={styles.historyDate}>{dayjs(item.date).format('DD MMM YYYY')}</Text>
+                        <Text style={styles.historyTime}>{time}</Text>
+                      </View>
+                    );
+                  })
+                )}
+              </ScrollView>
+            )}
+            <TouchableOpacity style={[styles.cancelBtn, { marginTop: 16, width: '100%' }]} onPress={() => setHistoryUser(null)}>
+              <Text style={styles.cancelBtnText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Gym QR code modal */}
       <Modal visible={showGymQR} transparent animationType="fade">
         <View style={styles.overlay}>
@@ -243,7 +299,7 @@ function StatChip({ label, value, color }: { label: string; value: number; color
   );
 }
 
-function MemberCard({ user, onEdit, onDelete }: { user: UserProfile; onEdit: () => void; onDelete: () => void }) {
+function MemberCard({ user, onEdit, onDelete, onHistory }: { user: UserProfile; onEdit: () => void; onDelete: () => void; onHistory: () => void }) {
   const memberColor = MEMBERSHIP_COLOR[user.membershipType] ?? colors.primary;
   const initials = user.displayName
     ? user.displayName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
@@ -282,6 +338,9 @@ function MemberCard({ user, onEdit, onDelete }: { user: UserProfile; onEdit: () 
       </View>
 
       <View style={styles.actions}>
+        <TouchableOpacity style={styles.actionBtn} onPress={onHistory}>
+          <Ionicons name="time-outline" size={18} color={colors.secondary} />
+        </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn} onPress={onEdit}>
           <Ionicons name="pencil-outline" size={18} color={colors.primary} />
         </TouchableOpacity>
@@ -385,4 +444,11 @@ const styles = StyleSheet.create({
     marginBottom: 14, alignItems: 'center',
   },
   gymQrCode: { color: colors.textMuted, fontSize: 11, letterSpacing: 2, marginBottom: 20 },
+  historyModalHeader: { width: '100%', marginBottom: 16 },
+  historySubtitle: { color: colors.textMuted, fontSize: 12, marginTop: 4 },
+  historyEmpty: { color: colors.textDim, fontSize: 13, textAlign: 'center', paddingVertical: 20 },
+  historyRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
+  historyRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
+  historyDate: { flex: 1, color: colors.text, fontSize: 14 },
+  historyTime: { color: colors.secondary, fontSize: 13, fontWeight: '600' },
 });

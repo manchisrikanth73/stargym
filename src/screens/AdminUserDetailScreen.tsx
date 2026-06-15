@@ -14,10 +14,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { createUserProfile, updateUserProfile, UserProfile, MembershipType } from '../services/users';
-import { getMemberCheckinHistory } from '../services/attendance';
 import DateInput from '../components/DateInput';
 import { colors } from '../theme/colors';
-import dayjs from 'dayjs';
 
 type RouteParams = {
   AdminUserDetail: { user: UserProfile | null };
@@ -46,9 +44,6 @@ export default function AdminUserDetailScreen() {
   const [activationStartDate, setActivationStartDate] = useState(existing?.activationStartDate ?? '');
   const [activationEndDate, setActivationEndDate]     = useState(existing?.activationEndDate ?? '');
   const [saving, setSaving] = useState(false);
-  const [history, setHistory] = useState<{ date: string; checkedInAt: any }[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [historyLoaded, setHistoryLoaded] = useState(false);
 
   const GENDER_OPTIONS = ['Male', 'Female', 'Other'] as const;
 
@@ -217,56 +212,6 @@ export default function AdminUserDetailScreen() {
         </View>
       </View>
 
-      {/* Check-in History — existing members only */}
-      {!isNew && (
-        <View style={styles.section}>
-          <View style={styles.historyHeader}>
-            <Text style={styles.historyTitle}>Check-in History (Last 60 Days)</Text>
-            {!historyLoaded && (
-              <TouchableOpacity
-                style={styles.historyBtn}
-                onPress={async () => {
-                  setHistoryLoading(true);
-                  try {
-                    const data = await getMemberCheckinHistory(existing!.uid);
-                    setHistory(data);
-                    setHistoryLoaded(true);
-                  } catch (err: any) {
-                    notify('Error', err.message ?? 'Failed to load history.');
-                  } finally {
-                    setHistoryLoading(false);
-                  }
-                }}
-                disabled={historyLoading}
-              >
-                {historyLoading
-                  ? <ActivityIndicator size="small" color={colors.primary} />
-                  : <Text style={styles.historyBtnText}>Show History</Text>
-                }
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {historyLoaded && (
-            history.length === 0 ? (
-              <Text style={styles.historyEmpty}>No check-ins in the last 60 days.</Text>
-            ) : (
-              history.map((item, i) => {
-                const d = dayjs(item.date);
-                const time = item.checkedInAt ? dayjs(item.checkedInAt.toDate()).format('h:mm A') : '—';
-                return (
-                  <View key={item.date} style={[styles.historyRow, i < history.length - 1 && styles.historyRowBorder]}>
-                    <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-                    <Text style={styles.historyDate}>{d.format('DD MMM YYYY')}</Text>
-                    <Text style={styles.historyTime}>{time}</Text>
-                  </View>
-                );
-              })
-            )
-          )}
-        </View>
-      )}
-
       {/* Save */}
       <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
         {saving ? (
@@ -380,16 +325,4 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   saveBtnText: { color: '#000', fontSize: 16, fontWeight: '800' },
-  historyHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  historyTitle: { color: colors.textMuted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  historyBtn: {
-    backgroundColor: `${colors.primary}22`, borderRadius: 8, borderWidth: 1,
-    borderColor: `${colors.primary}44`, paddingHorizontal: 12, paddingVertical: 5,
-  },
-  historyBtnText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
-  historyEmpty: { color: colors.textDim, fontSize: 13, textAlign: 'center', paddingVertical: 12 },
-  historyRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
-  historyRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
-  historyDate: { flex: 1, color: colors.text, fontSize: 14 },
-  historyTime: { color: colors.secondary, fontSize: 13, fontWeight: '600' },
 });
