@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Goal
 
-StarGym is a gym management web app for a single gym. It lets members check in via QR code, track attendance, and view workout guides. Admins manage members, configure membership plans and pricing, and monitor real-time check-in activity.
+StarGym is a gym management web app for a single gym. Members check in via QR code, track attendance, and view workout guides. Admins manage members, configure membership plans and pricing, and monitor real-time check-in activity.
 
 ---
 
@@ -70,8 +70,8 @@ stargym/
 │   ├── services/                   # All Firebase/API calls
 │   │   ├── firebase.ts             # App init — exports auth, db
 │   │   ├── auth.ts                 # signIn, signUp, logOut, resetPassword
-│   │   ├── users.ts                # UserProfile CRUD + type
-│   │   ├── attendance.ts           # checkIn, subscribeRecentCheckins, getMonthlyCount
+│   │   ├── users.ts                # UserProfile CRUD + type + disableMember/enableMember
+│   │   ├── attendance.ts           # checkIn, subscribeRecentCheckins, getMemberCheckinHistory
 │   │   ├── gymSettings.ts          # Membership prices + workout access config
 │   │   └── email.ts                # EmailJS new-member notification
 │   ├── components/
@@ -100,10 +100,44 @@ stargym/
 - `activationEndDate >= today` → auto-set `isActive = true` (enforced on admin save)
 - Workout access per plan type is configured by admin in Settings — defaults: basic=false, premium=true, vip=true
 - Admin-created members use a placeholder UID (`manual_{timestamp}`) — no Firebase Auth account
-- Deleting a member removes Firestore doc only — Firebase Auth account persists
+- Disabling a member sets `isActive = false` and `scheduledDeleteAt = today + 60 days`
+- AdminScreen auto-purges members whose `scheduledDeleteAt <= today` on every load
+- Disabled members can be re-enabled (clears `isActive = true`, `scheduledDeleteAt = null`) before the 60-day window expires
 - Duplicate check-in on the same day is silently rejected (idempotent)
 - Admin email (manchisrikanth73@gmail.com) is notified via EmailJS on every new member signup
 - Roles: `admin` and `member` — read from Firestore, not from Firebase Auth claims
+
+---
+
+## UserProfile Schema
+
+```typescript
+interface UserProfile {
+  uid: string;
+  email: string;
+  displayName: string;
+  phone: string;
+  role: 'admin' | 'member';
+  membershipType: 'basic' | 'premium' | 'vip';
+  isActive: boolean;
+  joinedAt: Timestamp | null;
+  activationStartDate: string | null;   // YYYY-MM-DD
+  activationEndDate: string | null;     // YYYY-MM-DD
+  age: number | null;
+  gender: string | null;                // 'Male' | 'Female' | 'Other'
+  scheduledDeleteAt: string | null;     // YYYY-MM-DD, set by disableMember()
+}
+```
+
+When adding fields to `UserProfile`, update `createUserProfile` in the same commit.
+
+---
+
+## Admin Member Management
+
+- **AdminScreen** (member list): "Check-in History" and "Update" buttons per card; no manual delete
+- **AdminUserDetailScreen** (edit form): shows "Disable Member" for active members, "Enable Member" for disabled ones (those with `scheduledDeleteAt` set)
+- Check-in history (last 60 days) is lazy-loaded via a modal in AdminScreen — not on the edit screen
 
 ---
 
@@ -132,15 +166,12 @@ stargym/
 - No `Alert.alert` on web — use `(window as any).alert` / `(window as any).confirm` or inline Modal
 - `typeof window !== 'undefined'` guard before any `window.*` access in shared (non-.web) files
 - Admin-only features are gated by Firestore `role` field — never trust client-side state alone
-- No sensitive values hardcoded — Firebase config is in `src/services/firebase.ts`
 
 ---
 
 ## Coding Standards
 
-- No comments unless the WHY is non-obvious
 - No hardcoded colors — always import from `src/theme/colors.ts`
-- No direct Firestore imports in screens
 - `useFocusEffect + useCallback` on drawer screens (stay mounted; `useEffect([])` fires once)
 - Platform files (`.web.tsx`) only when implementation genuinely differs
 - DOM elements (`<video>`, `<canvas>`) only in `.web.tsx` files
