@@ -80,6 +80,10 @@ export async function disableMember(uid: string): Promise<void> {
   await updateDoc(doc(usersRef(), uid), { isActive: false, scheduledDeleteAt });
 }
 
+export async function enableMember(uid: string): Promise<void> {
+  await updateDoc(doc(usersRef(), uid), { isActive: true, scheduledDeleteAt: null });
+}
+
 export async function isCurrentUserAdmin(uid: string): Promise<boolean> {
   const profile = await getUserProfile(uid);
   return profile?.role === 'admin';

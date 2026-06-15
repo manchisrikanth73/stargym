@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { createUserProfile, updateUserProfile, disableMember, UserProfile, MembershipType } from '../services/users';
+import { createUserProfile, updateUserProfile, disableMember, enableMember, UserProfile, MembershipType } from '../services/users';
 import DateInput from '../components/DateInput';
 import { colors } from '../theme/colors';
 
@@ -64,6 +64,8 @@ export default function AdminUserDetailScreen() {
     }
   };
 
+  const isPendingDeletion = !!existing?.scheduledDeleteAt;
+
   const handleDisable = async () => {
     const name = displayName.trim() || 'this member';
     const confirmed = Platform.OS === 'web'
@@ -76,6 +78,18 @@ export default function AdminUserDetailScreen() {
       navigation.goBack();
     } catch (err: any) {
       notify('Error', err.message ?? 'Failed to disable member.');
+    } finally {
+      setDisabling(false);
+    }
+  };
+
+  const handleEnable = async () => {
+    setDisabling(true);
+    try {
+      await enableMember(existing!.uid);
+      navigation.goBack();
+    } catch (err: any) {
+      notify('Error', err.message ?? 'Failed to enable member.');
     } finally {
       setDisabling(false);
     }
@@ -243,16 +257,29 @@ export default function AdminUserDetailScreen() {
       </TouchableOpacity>
 
       {!isNew && (
-        <TouchableOpacity style={styles.disableBtn} onPress={handleDisable} disabled={disabling}>
-          {disabling ? (
-            <ActivityIndicator color={colors.error} />
-          ) : (
-            <>
-              <Ionicons name="ban-outline" size={18} color={colors.error} />
-              <Text style={styles.disableBtnText}>Disable Member</Text>
-            </>
-          )}
-        </TouchableOpacity>
+        isPendingDeletion ? (
+          <TouchableOpacity style={styles.enableBtn} onPress={handleEnable} disabled={disabling}>
+            {disabling ? (
+              <ActivityIndicator color={colors.success} />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle-outline" size={18} color={colors.success} />
+                <Text style={styles.enableBtnText}>Enable Member</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.disableBtn} onPress={handleDisable} disabled={disabling}>
+            {disabling ? (
+              <ActivityIndicator color={colors.error} />
+            ) : (
+              <>
+                <Ionicons name="ban-outline" size={18} color={colors.error} />
+                <Text style={styles.disableBtnText}>Disable Member</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )
       )}
 
       <View style={{ height: 40 }} />
@@ -369,4 +396,17 @@ const styles = StyleSheet.create({
     backgroundColor: `${colors.error}11`,
   },
   disableBtnText: { color: colors.error, fontSize: 15, fontWeight: '700' },
+  enableBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    height: 50,
+    borderRadius: 16,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: `${colors.success}55`,
+    backgroundColor: `${colors.success}11`,
+  },
+  enableBtnText: { color: colors.success, fontSize: 15, fontWeight: '700' },
 });
