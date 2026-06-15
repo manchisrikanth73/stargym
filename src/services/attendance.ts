@@ -8,6 +8,7 @@ import {
   query,
   orderBy,
   where,
+  onSnapshot,
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore';
@@ -55,18 +56,17 @@ export type CheckinRecord = {
   checkedInAt: Timestamp;
 };
 
-export async function getRecentCheckins(): Promise<CheckinRecord[]> {
-  return withRetry('getRecentCheckins', async () => {
-    const cutoff = Timestamp.fromDate(new Date(Date.now() - 24 * 60 * 60 * 1000));
-    const q = query(
-      collectionGroup(db, 'attendance'),
-      where('checkedInAt', '>=', cutoff),
-      orderBy('checkedInAt', 'desc'),
-    );
-    const snap = await getDocs(q);
-    return snap.docs
+export function subscribeRecentCheckins(cb: (records: CheckinRecord[]) => void): () => void {
+  const cutoff = Timestamp.fromDate(new Date(Date.now() - 24 * 60 * 60 * 1000));
+  const q = query(
+    collectionGroup(db, 'attendance'),
+    where('checkedInAt', '>=', cutoff),
+    orderBy('checkedInAt', 'desc'),
+  );
+  return onSnapshot(q, snap => {
+    cb(snap.docs
       .map(d => ({ uid: d.data().uid as string, checkedInAt: d.data().checkedInAt as Timestamp }))
-      .filter(r => r.uid && r.checkedInAt);
+      .filter(r => r.uid && r.checkedInAt));
   });
 }
 
