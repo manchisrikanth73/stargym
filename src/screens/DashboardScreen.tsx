@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -50,7 +50,6 @@ export default function DashboardScreen() {
 
   const user = auth.currentUser;
   const displayName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Athlete';
-  const userMapRef = useRef<Record<string, { name: string; email: string }>>({});
 
   const greeting = () => {
     const h = new Date().getHours();
@@ -92,7 +91,6 @@ export default function DashboardScreen() {
       setMemberTotal(all.length);
       setMemberActive(all.filter(u => u.isActive).length);
       setMemberInactive(all.filter(u => !u.isActive).length);
-      userMapRef.current = Object.fromEntries(all.map(u => [u.uid, { name: u.displayName, email: u.email }]));
     }
   }, [user?.uid]);
 
@@ -102,12 +100,11 @@ export default function DashboardScreen() {
     if (!isAdmin) return;
     return subscribeRecentCheckins(records => {
       setRecentCheckins(records.map(r => {
-        const u = userMapRef.current[r.uid];
         const d = dayjs(r.checkedInAt.toDate());
         const time = d.isSame(dayjs(), 'day')
           ? `Today ${d.format('h:mm A')}`
           : `Yesterday ${d.format('h:mm A')}`;
-        return { name: u?.name ?? 'Unknown', email: u?.email ?? '', time };
+        return { name: r.displayName || 'Unknown', email: r.email, time };
       }));
     });
   }, [isAdmin]);

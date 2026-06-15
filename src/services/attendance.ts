@@ -1,6 +1,5 @@
 import {
   collection,
-  collectionGroup,
   doc,
   getDoc,
   setDoc,
@@ -26,10 +25,18 @@ export async function checkIn(): Promise<boolean> {
     const docRef = doc(ref(), key);
     const snap = await getDoc(docRef);
     if (snap.exists()) return false;
+    const user = auth.currentUser!;
     await setDoc(docRef, {
       date: Timestamp.fromDate(new Date()),
       checkedInAt: serverTimestamp(),
       uid: uid(),
+    });
+    await setDoc(doc(collection(db, 'checkins'), `${uid()}_${key}`), {
+      uid: uid(),
+      displayName: user.displayName ?? '',
+      email: user.email ?? '',
+      checkedInAt: serverTimestamp(),
+      date: key,
     });
     return true;
   });
@@ -51,25 +58,6 @@ export async function getAttendanceDates(): Promise<string[]> {
   });
 }
 
-export type CheckinRecord = {
-  uid: string;
-  checkedInAt: Timestamp;
-};
-
-export function subscribeRecentCheckins(cb: (records: CheckinRecord[]) => void): () => void {
-  const cutoff = Timestamp.fromDate(new Date(Date.now() - 24 * 60 * 60 * 1000));
-  const q = query(
-    collectionGroup(db, 'attendance'),
-    where('checkedInAt', '>=', cutoff),
-    orderBy('checkedInAt', 'desc'),
-  );
-  return onSnapshot(q, snap => {
-    cb(snap.docs
-      .map(d => ({ uid: d.data().uid as string, checkedInAt: d.data().checkedInAt as Timestamp }))
-      .filter(r => r.uid && r.checkedInAt));
-  });
-}
-
 export async function getMonthlyCount(year: number, month: number): Promise<number> {
   const start = new Date(year, month - 1, 1);
   const end = new Date(year, month, 1);
@@ -80,4 +68,25 @@ export async function getMonthlyCount(year: number, month: number): Promise<numb
   );
   const snap = await getDocs(q);
   return snap.size;
+}
+
+export type CheckinRecord = {
+  uid: string;
+  displayName: string;
+  email: string;
+  checkedInAt: Timestamp;
+};
+
+export function subscribeRecentCheckins(cb: (records: CheckinRecord[]) => void): () => void {
+  const cutoff = Timestamp.fromDate(new Date(Date.now() - 24 * 60 * 60 * 1000));
+  const q = query(
+    collection(db, 'checkins'),
+    where('checkedInAt', '>=', cutoff),
+    orderBy('checkedInAt', 'desc'),
+  );
+  return onSnapshot(q, snap => {
+    cb(snap.docs
+      .map(d => d.data() as CheckinRecord)
+      .filter(r => r.uid && r.checkedInAt));
+  }, err => console.error('[subscribeRecentCheckins]', err));
 }
