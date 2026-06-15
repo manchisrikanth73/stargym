@@ -109,12 +109,18 @@ export default function AdminScreen() {
           <Ionicons name="menu" size={28} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.heading}>Members</Text>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => navigation.navigate('AdminUserDetail', { user: null })}
-        >
-          <Ionicons name="person-add" size={20} color="#000" />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity style={styles.backDashBtn} onPress={() => navigation.navigate('Main', { screen: 'Dashboard' })}>
+            <Ionicons name="home-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.backDashText}>Dashboard</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => navigation.navigate('AdminUserDetail', { user: null })}
+          >
+            <Ionicons name="person-add" size={20} color="#000" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Stats */}
@@ -291,6 +297,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingTop: 54, paddingBottom: 12,
   },
   heading: { color: colors.text, fontSize: 20, fontWeight: '800' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  backDashBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderWidth: 1, borderColor: colors.border, borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 5,
+  },
+  backDashText: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
   qrBtn: {
     width: 38, height: 38, borderRadius: 19,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,

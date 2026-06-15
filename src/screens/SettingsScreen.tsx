@@ -125,7 +125,10 @@ export default function SettingsScreen() {
           <Ionicons name="menu" size={28} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.heading}>Settings</Text>
-        <View style={{ width: 28 }} />
+        <TouchableOpacity style={styles.backDashBtn} onPress={() => navigation.navigate('Main', { screen: 'Dashboard' })}>
+          <Ionicons name="home-outline" size={14} color={colors.textMuted} />
+          <Text style={styles.backDashText}>Dashboard</Text>
+        </TouchableOpacity>
       </View>
 
       {loading ? (
@@ -331,6 +334,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingTop: 54, paddingBottom: 14,
   },
   heading: { color: colors.text, fontSize: 20, fontWeight: '800' },
+  backDashBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderWidth: 1, borderColor: colors.border, borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 5,
+  },
+  backDashText: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
   body: { padding: 20, paddingTop: 8 },
   avatarWrap: { alignItems: 'center', paddingVertical: 24 },
   avatar: {
