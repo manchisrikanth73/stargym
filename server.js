@@ -37,17 +37,31 @@ function handler(req, res) {
 const certPath = path.join(__dirname, 'cert.pem');
 const keyPath = path.join(__dirname, 'key.pem');
 
+function onError(err) {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n  Port ${PORT} is already in use.`);
+    console.error(`  Kill the existing process: lsof -ti:${PORT} | xargs kill -9\n`);
+  } else {
+    console.error('\n  Server error:', err.message, '\n');
+  }
+  process.exit(1);
+}
+
 if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
   const options = { cert: fs.readFileSync(certPath), key: fs.readFileSync(keyPath) };
-  https.createServer(options, handler).listen(PORT, '0.0.0.0', () => {
-    console.log(`\n  StarGym is running over HTTPS!\n`);
-    console.log(`  Open on your iPhone: https://192.168.1.110:${PORT}\n`);
-    console.log(`  (Accept the security warning on first visit)\n`);
-  });
+  https.createServer(options, handler)
+    .on('error', onError)
+    .listen(PORT, '0.0.0.0', () => {
+      console.log(`\n  StarGym is running over HTTPS!\n`);
+      console.log(`  Open on your iPhone: https://192.168.1.110:${PORT}\n`);
+      console.log(`  (Accept the security warning on first visit)\n`);
+    });
 } else {
-  http.createServer(handler).listen(PORT, '0.0.0.0', () => {
-    console.log(`\n  StarGym is running!\n`);
-    console.log(`  Open on your iPhone: http://192.168.1.110:${PORT}\n`);
-    console.log(`  Note: Live QR scanner needs HTTPS. Run: npm run gen-cert\n`);
-  });
+  http.createServer(handler)
+    .on('error', onError)
+    .listen(PORT, '0.0.0.0', () => {
+      console.log(`\n  StarGym is running!\n`);
+      console.log(`  Open on your iPhone: http://192.168.1.110:${PORT}\n`);
+      console.log(`  Note: Live QR scanner needs HTTPS. Run: npm run gen-cert\n`);
+    });
 }
