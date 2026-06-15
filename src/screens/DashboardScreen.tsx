@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { DrawerActions, useNavigation } from '@react-navigation/native';
 import dayjs from 'dayjs';
 import { auth } from '../services/firebase';
-import { isCheckedInToday, getMonthlyCount } from '../services/attendance';
+import { isCheckedInToday, getMonthlyCount, getRecentCheckins, CheckinRecord } from '../services/attendance';
 import { getUserProfile, getAllUsers, updateUserProfile } from '../services/users';
 import { colors } from '../theme/colors';
 import { GYM_CHECKIN_CODE } from '../config';
@@ -42,6 +42,7 @@ export default function DashboardScreen() {
   const [memberInactive, setMemberInactive] = useState(0);
   const [showGymQR, setShowGymQR] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [recentCheckins, setRecentCheckins] = useState<{ name: string; email: string; time: string }[]>([]);
   const [activationStartDate, setActivationStartDate] = useState<string | null>(null);
   const [activationEndDate, setActivationEndDate] = useState<string | null>(null);
   const [membershipType, setMembershipType] = useState<string | null>(null);
@@ -86,10 +87,19 @@ export default function DashboardScreen() {
     const admin = profile?.role === 'admin';
     setIsAdmin(admin);
     if (admin) {
-      const all = await getAllUsers();
+      const [all, recent] = await Promise.all([getAllUsers(), getRecentCheckins()]);
       setMemberTotal(all.length);
       setMemberActive(all.filter(u => u.isActive).length);
       setMemberInactive(all.filter(u => !u.isActive).length);
+      const userMap = Object.fromEntries(all.map(u => [u.uid, u]));
+      setRecentCheckins(recent.map(r => {
+        const u = userMap[r.uid];
+        const d = dayjs(r.checkedInAt.toDate());
+        const time = d.isSame(dayjs(), 'day')
+          ? `Today ${d.format('h:mm A')}`
+          : `Yesterday ${d.format('h:mm A')}`;
+        return { name: u?.displayName ?? 'Unknown', email: u?.email ?? '', time };
+      }));
     }
   }, [user?.uid]);
 
@@ -294,11 +304,38 @@ export default function DashboardScreen() {
         <ActionButton icon="barbell" label="Workouts" color="#E74C3C" onPress={() => Alert.alert('Coming soon!')} />
       </View>
 
-      {/* Motivation */}
-      <View style={styles.motivCard}>
-        <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.secondary} />
-        <Text style={styles.motivText}>{QUOTES[new Date().getDate() % QUOTES.length]}</Text>
-      </View>
+      {/* Admin: recent check-ins / Member: motivation */}
+      {isAdmin ? (
+        <>
+          <Text style={styles.sectionTitle}>Recent Check-ins (Last 24h)</Text>
+          {recentCheckins.length === 0 ? (
+            <View style={styles.emptyCheckins}>
+              <Ionicons name="time-outline" size={28} color={colors.textDim} />
+              <Text style={styles.emptyCheckinsText}>No check-ins in the last 24 hours</Text>
+            </View>
+          ) : (
+            <View style={styles.checkinList}>
+              {recentCheckins.map((item, i) => (
+                <View key={i} style={[styles.checkinRow, i < recentCheckins.length - 1 && styles.checkinRowBorder]}>
+                  <View style={styles.checkinAvatar}>
+                    <Text style={styles.checkinAvatarText}>{item.name[0]?.toUpperCase() ?? '?'}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.checkinName}>{item.name}</Text>
+                    <Text style={styles.checkinEmail}>{item.email}</Text>
+                  </View>
+                  <Text style={styles.checkinTime}>{item.time}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </>
+      ) : (
+        <View style={styles.motivCard}>
+          <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.secondary} />
+          <Text style={styles.motivText}>{QUOTES[new Date().getDate() % QUOTES.length]}</Text>
+        </View>
+      )}
 
       <View style={{ height: 32 }} />
 
@@ -528,4 +565,31 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   qrCloseBtnText: { color: colors.text, fontSize: 15, fontWeight: '600' },
+  checkinList: {
+    marginHorizontal: 20, marginBottom: 24,
+    backgroundColor: colors.surface, borderRadius: 16,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+    overflow: 'hidden',
+  },
+  checkinRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingVertical: 14, gap: 12,
+  },
+  checkinRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
+  checkinAvatar: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: `${colors.primary}33`,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  checkinAvatarText: { color: colors.primary, fontSize: 14, fontWeight: '700' },
+  checkinName: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  checkinEmail: { color: colors.textMuted, fontSize: 12, marginTop: 1 },
+  checkinTime: { color: colors.secondary, fontSize: 12, fontWeight: '600' },
+  emptyCheckins: {
+    marginHorizontal: 20, marginBottom: 24, padding: 28,
+    backgroundColor: colors.surface, borderRadius: 16,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center', gap: 10,
+  },
+  emptyCheckinsText: { color: colors.textDim, fontSize: 13 },
 });

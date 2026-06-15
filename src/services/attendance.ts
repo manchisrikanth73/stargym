@@ -1,5 +1,6 @@
 import {
   collection,
+  collectionGroup,
   doc,
   getDoc,
   setDoc,
@@ -46,6 +47,26 @@ export async function getAttendanceDates(): Promise<string[]> {
       const ts = d.data().date as Timestamp;
       return dateKey(ts.toDate());
     });
+  });
+}
+
+export type CheckinRecord = {
+  uid: string;
+  checkedInAt: Timestamp;
+};
+
+export async function getRecentCheckins(): Promise<CheckinRecord[]> {
+  return withRetry('getRecentCheckins', async () => {
+    const cutoff = Timestamp.fromDate(new Date(Date.now() - 24 * 60 * 60 * 1000));
+    const q = query(
+      collectionGroup(db, 'attendance'),
+      where('checkedInAt', '>=', cutoff),
+      orderBy('checkedInAt', 'desc'),
+    );
+    const snap = await getDocs(q);
+    return snap.docs
+      .map(d => ({ uid: d.data().uid as string, checkedInAt: d.data().checkedInAt as Timestamp }))
+      .filter(r => r.uid && r.checkedInAt);
   });
 }
 
