@@ -8,6 +8,7 @@ import AdminScreen from '../screens/AdminScreen';
 import AdminUserDetailScreen from '../screens/AdminUserDetailScreen';
 import WorkoutsScreen from '../screens/WorkoutsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import ProgressScreen from '../screens/ProgressScreen';
 import DrawerContent from './DrawerContent';
 import { colors } from '../theme/colors';
 
@@ -38,6 +39,7 @@ export default function AppNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Main" component={DrawerNav} />
       <Stack.Screen name="AdminUserDetail" component={AdminUserDetailScreen} />
+      <Stack.Screen name="Progress" component={ProgressScreen} />
     </Stack.Navigator>
   );
 }
