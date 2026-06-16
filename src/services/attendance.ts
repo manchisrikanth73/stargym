@@ -9,6 +9,7 @@ import {
   where,
   onSnapshot,
   serverTimestamp,
+  writeBatch,
   Timestamp,
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
@@ -22,22 +23,25 @@ const dateKey = (d: Date) => dayjs(d).format('YYYY-MM-DD');
 export async function checkIn(): Promise<boolean> {
   return withRetry('checkIn', async () => {
     const key = dateKey(new Date());
-    const docRef = doc(ref(), key);
-    const snap = await getDoc(docRef);
+    const attendanceRef = doc(ref(), key);
+    const snap = await getDoc(attendanceRef);
     if (snap.exists()) return false;
     const user = auth.currentUser!;
-    await setDoc(docRef, {
+    const currentUid = uid();
+    const batch = writeBatch(db);
+    batch.set(attendanceRef, {
       date: Timestamp.fromDate(new Date()),
       checkedInAt: serverTimestamp(),
-      uid: uid(),
+      uid: currentUid,
     });
-    await setDoc(doc(collection(db, 'checkins'), `${uid()}_${key}`), {
-      uid: uid(),
+    batch.set(doc(collection(db, 'checkins'), `${currentUid}_${key}`), {
+      uid: currentUid,
       displayName: user.displayName ?? '',
       email: user.email ?? '',
       checkedInAt: serverTimestamp(),
       date: key,
     });
+    await batch.commit();
     return true;
   });
 }

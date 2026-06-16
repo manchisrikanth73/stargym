@@ -49,6 +49,7 @@ export async function createUserProfile(uid: string, email: string, displayName:
     activationEndDate: null,
     age: age ?? null,
     gender: gender || null,
+    scheduledDeleteAt: null,
   });
 }
 
