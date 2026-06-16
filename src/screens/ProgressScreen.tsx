@@ -15,7 +15,7 @@ export default function ProgressScreen() {
   const [loading, setLoading] = useState(true);
   const [thisMonth, setThisMonth] = useState(0);
   const [monthly, setMonthly] = useState<{ label: string; count: number }[]>([]);
-  const [recentDates, setRecentDates] = useState<string[]>([]);
+  const [thisWeekDates, setThisWeekDates] = useState<string[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -31,7 +31,9 @@ export default function ProgressScreen() {
             getAttendanceDates(),
           ]);
           setThisMonth(current);
-          setRecentDates([...allDates].reverse().slice(0, 10));
+          const weekStart = dayjs().startOf('week').format('YYYY-MM-DD');
+          const today = dayjs().format('YYYY-MM-DD');
+          setThisWeekDates(allDates.filter(d => d >= weekStart && d <= today).reverse());
 
           const past: { label: string; count: number }[] = [];
           for (let i = 5; i >= 0; i--) {
@@ -95,14 +97,14 @@ export default function ProgressScreen() {
             </View>
           </View>
 
-          {/* Recent check-ins */}
+          {/* This week check-ins */}
           <View style={styles.card}>
-            <Text style={styles.cardLabel}>Recent Check-ins</Text>
-            {recentDates.length === 0 ? (
-              <Text style={styles.empty}>No check-ins yet</Text>
+            <Text style={styles.cardLabel}>This Week Check-ins</Text>
+            {thisWeekDates.length === 0 ? (
+              <Text style={styles.empty}>No check-ins this week</Text>
             ) : (
-              recentDates.map((date, i) => (
-                <View key={date} style={[styles.dateRow, i < recentDates.length - 1 && styles.dateRowBorder]}>
+              thisWeekDates.map((date, i) => (
+                <View key={date} style={[styles.dateRow, i < thisWeekDates.length - 1 && styles.dateRowBorder]}>
                   <Ionicons name="checkmark-circle" size={16} color={colors.success} />
                   <Text style={styles.dateText}>{dayjs(date).format('DD MMM YYYY')}</Text>
                   <Text style={styles.dateDow}>{dayjs(date).format('ddd')}</Text>
