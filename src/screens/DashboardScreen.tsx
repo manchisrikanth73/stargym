@@ -16,6 +16,7 @@ import dayjs from 'dayjs';
 import { auth } from '../services/firebase';
 import { isCheckedInToday, getMonthlyCount, subscribeRecentCheckins } from '../services/attendance';
 import { getUserProfile, getAllUsers, updateUserProfile } from '../services/users';
+import { subscribeWorkoutAccess, WorkoutAccess } from '../services/gymSettings';
 import { colors } from '../theme/colors';
 import { GYM_CHECKIN_CODE } from '../config';
 
@@ -47,6 +48,7 @@ export default function DashboardScreen() {
   const [activationEndDate, setActivationEndDate] = useState<string | null>(null);
   const [membershipType, setMembershipType] = useState<string | null>(null);
   const [isExpired, setIsExpired] = useState(false);
+  const [workoutAccess, setWorkoutAccess] = useState<WorkoutAccess>({ basic: false, premium: true, vip: true });
 
   const user = auth.currentUser;
   const displayName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Athlete';
@@ -95,6 +97,10 @@ export default function DashboardScreen() {
   }, [user?.uid]);
 
   useEffect(() => { loadStats(); }, [loadStats]);
+
+  useEffect(() => {
+    return subscribeWorkoutAccess(wa => setWorkoutAccess(wa));
+  }, []);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -305,7 +311,23 @@ export default function DashboardScreen() {
           ? <ActionButton icon="settings-outline" label="Settings" color="#9B59B6" onPress={() => navigation.navigate('Settings')} />
           : <ActionButton icon="bar-chart" label="Progress" color="#9B59B6" onPress={() => navigation.navigate('Progress' as never)} />
         }
-        <ActionButton icon="barbell" label="Workouts" color="#E74C3C" onPress={() => Alert.alert('Coming soon!')} />
+        <ActionButton
+          icon="barbell"
+          label="Workouts"
+          color="#E74C3C"
+          locked={!isAdmin && !!membershipType && !workoutAccess[membershipType as keyof WorkoutAccess]}
+          onPress={() => {
+            if (!isAdmin && membershipType && !workoutAccess[membershipType as keyof WorkoutAccess]) {
+              const allowed = (['premium', 'vip', 'basic'] as const).filter(p => workoutAccess[p]);
+              const hint = allowed.length ? allowed.join(' & ') + ' plans only' : 'Not available';
+              if (typeof window !== 'undefined') {
+                (window as any).alert(`Workouts not available on your plan.\n${hint}`);
+              }
+              return;
+            }
+            navigation.navigate('Workouts' as never);
+          }}
+        />
       </View>
 
       {/* Admin: recent check-ins / Member: motivation */}
@@ -369,9 +391,9 @@ export default function DashboardScreen() {
 }
 
 function ActionButton({
-  icon, label, color, onPress,
+  icon, label, color, onPress, locked,
 }: {
-  icon: string; label: string; color: string; onPress: () => void;
+  icon: string; label: string; color: string; onPress: () => void; locked?: boolean;
 }) {
   return (
     <TouchableOpacity
@@ -379,7 +401,17 @@ function ActionButton({
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Ionicons name={icon as any} size={24} color={color} />
+      <View style={{ position: 'relative' }}>
+        <Ionicons name={icon as any} size={24} color={color} />
+        {locked && (
+          <Ionicons
+            name="lock-closed"
+            size={10}
+            color={colors.error}
+            style={{ position: 'absolute', bottom: -2, right: -4 }}
+          />
+        )}
+      </View>
       <Text style={[styles.actionLabel, { color }]}>{label}</Text>
     </TouchableOpacity>
   );

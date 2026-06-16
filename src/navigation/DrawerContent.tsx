@@ -11,7 +11,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { auth } from '../services/firebase';
 import { logOut } from '../services/auth';
 import { getUserProfile } from '../services/users';
-import { subscribeWorkoutAccess, WorkoutAccess } from '../services/gymSettings';
 import { colors } from '../theme/colors';
 
 type NavItem = { label: string; icon: string; screen: string | null; adminOnly?: boolean; memberOnly?: boolean };
@@ -19,9 +18,7 @@ type NavItem = { label: string; icon: string; screen: string | null; adminOnly?:
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', icon: 'home-outline', screen: 'Dashboard' },
   { label: 'Check In', icon: 'qr-code-outline', screen: 'Checkin', memberOnly: true },
-  { label: 'Attendance', icon: 'calendar-outline', screen: 'Calendar', memberOnly: true },
   { label: 'Members', icon: 'people-outline', screen: 'Admin', adminOnly: true },
-  { label: 'Workouts', icon: 'barbell-outline', screen: 'Workouts', memberOnly: true },
   { label: 'Settings', icon: 'settings-outline', screen: 'Settings' },
 ];
 
@@ -30,22 +27,14 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
   const name = user?.displayName ?? user?.email?.split('@')[0] ?? 'Athlete';
   const email = user?.email ?? '';
   const [isAdmin, setIsAdmin] = useState(false);
-  const [membershipType, setMembershipType] = useState<string>('basic');
-  const [workoutAccess, setWorkoutAccess] = useState<WorkoutAccess>({ basic: false, premium: true, vip: true });
 
   useEffect(() => {
     if (user?.uid) {
       getUserProfile(user.uid).then(p => {
         setIsAdmin(p?.role === 'admin');
-        setMembershipType(p?.membershipType ?? 'basic');
       });
     }
   }, [user?.uid]);
-
-  useEffect(() => {
-    const unsubscribe = subscribeWorkoutAccess(wa => setWorkoutAccess(wa));
-    return unsubscribe;
-  }, []);
 
   const visibleItems = NAV_ITEMS.filter(item => {
     if (item.adminOnly) return isAdmin;
@@ -75,14 +64,7 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
 
         {/* Nav items */}
         {visibleItems.map(item => {
-          const isBasicLocked = !isAdmin && item.label === 'Workouts' && !workoutAccess[membershipType as keyof WorkoutAccess];
-          const disabled = !item.screen || isBasicLocked;
-          const allowedPlans = (['premium', 'vip', 'basic'] as const)
-            .filter(p => workoutAccess[p])
-            .map(p => p.charAt(0).toUpperCase() + p.slice(1));
-          const accessHint = allowedPlans.length
-            ? allowedPlans.join(' & ') + ' only'
-            : 'No plans enabled';
+          const disabled = !item.screen;
           return (
             <TouchableOpacity
               key={item.label}
@@ -103,14 +85,8 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
               />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.itemLabel, disabled && { color: colors.textDim }]}>{item.label}</Text>
-                {isBasicLocked && (
-                  <Text style={styles.premiumHint}>{accessHint}</Text>
-                )}
               </View>
-              {isBasicLocked && (
-                <Ionicons name="lock-closed" size={15} color={colors.error} />
-              )}
-              {!item.screen && !isBasicLocked && <Text style={styles.comingSoon}>soon</Text>}
+              {!item.screen && <Text style={styles.comingSoon}>soon</Text>}
             </TouchableOpacity>
           );
         })}
@@ -152,7 +128,6 @@ const styles = StyleSheet.create({
   itemLabel: { color: colors.text, fontSize: 15, fontWeight: '500', flex: 1 },
   itemDisabled: { opacity: 0.5 },
   comingSoon: { color: colors.textDim, fontSize: 10, fontWeight: '600' },
-  premiumHint: { color: colors.textDim, fontSize: 10, fontWeight: '600', marginTop: 1 },
   logoutBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 18, paddingHorizontal: 20 },
   logoutLabel: { color: colors.error, fontSize: 15, fontWeight: '600' },
 });
