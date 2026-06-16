@@ -16,7 +16,6 @@ import dayjs from 'dayjs';
 import { auth } from '../services/firebase';
 import { isCheckedInToday, getMonthlyCount, subscribeRecentCheckins } from '../services/attendance';
 import { getUserProfile, getAllUsers, updateUserProfile } from '../services/users';
-import { subscribeWorkoutAccess, WorkoutAccess } from '../services/gymSettings';
 import { colors } from '../theme/colors';
 import { GYM_CHECKIN_CODE } from '../config';
 
@@ -49,7 +48,6 @@ export default function DashboardScreen() {
   const [activationEndDate, setActivationEndDate] = useState<string | null>(null);
   const [membershipType, setMembershipType] = useState<string | null>(null);
   const [isExpired, setIsExpired] = useState(false);
-  const [workoutAccess, setWorkoutAccess] = useState<WorkoutAccess>({ basic: false, premium: true, vip: true });
 
   const user = auth.currentUser;
   const displayName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Athlete';
@@ -98,10 +96,6 @@ export default function DashboardScreen() {
   }, [user?.uid]);
 
   useEffect(() => { loadStats(); }, [loadStats]);
-
-  useEffect(() => {
-    return subscribeWorkoutAccess(wa => setWorkoutAccess(wa));
-  }, []);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -312,21 +306,12 @@ export default function DashboardScreen() {
           ? <ActionButton icon="settings-outline" label="Settings" color="#9B59B6" onPress={() => navigation.navigate('Settings')} />
           : <ActionButton icon="bar-chart" label="Progress" color="#9B59B6" onPress={() => navigation.navigate('Progress' as never)} />
         }
-        {(() => {
-          const isLocked = !isAdmin && !!membershipType && !workoutAccess[membershipType as keyof WorkoutAccess];
-          const allowed = (['premium', 'vip', 'basic'] as const).filter(p => workoutAccess[p]);
-          const lockHint = allowed.length ? allowed.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' & ') + ' only' : 'Not available';
-          return (
-            <ActionButton
-              icon="barbell"
-              label="Workouts"
-              color="#E74C3C"
-              locked={isLocked}
-              lockHint={isLocked ? lockHint : undefined}
-              onPress={() => { if (!isLocked) navigation.navigate('Workouts' as never); }}
-            />
-          );
-        })()}
+        <ActionButton
+          icon="barbell"
+          label="Workouts"
+          color="#E74C3C"
+          onPress={() => navigation.navigate('Workouts' as never)}
+        />
       </View>
 
       {/* Admin: recent check-ins / Member: motivation */}
@@ -425,26 +410,18 @@ export default function DashboardScreen() {
 }
 
 function ActionButton({
-  icon, label, color, onPress, locked, lockHint,
+  icon, label, color, onPress,
 }: {
-  icon: string; label: string; color: string; onPress: () => void; locked?: boolean; lockHint?: string;
+  icon: string; label: string; color: string; onPress: () => void;
 }) {
   return (
     <TouchableOpacity
       style={[styles.actionBtn, { borderColor: `${color}44`, backgroundColor: `${color}18` }]}
       onPress={onPress}
-      activeOpacity={locked ? 1 : 0.7}
+      activeOpacity={0.7}
     >
-      <Ionicons name={icon as any} size={24} color={locked ? colors.textDim : color} />
-      <Text style={[styles.actionLabel, { color: locked ? colors.textDim : color }]}>{label}</Text>
-      {locked && lockHint && (
-        <Text style={styles.actionLockHint}>{lockHint}</Text>
-      )}
-      {locked && (
-        <View style={styles.actionLockOverlay} pointerEvents="none">
-          <Ionicons name="lock-closed" size={32} color={colors.error} style={{ opacity: 0.45 }} />
-        </View>
-      )}
+      <Ionicons name={icon as any} size={24} color={color} />
+      <Text style={[styles.actionLabel, { color }]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -548,22 +525,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
     gap: 8,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  actionLockHint: {
-    color: colors.error,
-    fontSize: 9,
-    fontWeight: '700',
-    textAlign: 'center',
-    letterSpacing: 0.3,
-    paddingHorizontal: 4,
-  },
-  actionLockOverlay: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   actionLabel: { fontSize: 11, fontWeight: '600' },
   motivCard: {
