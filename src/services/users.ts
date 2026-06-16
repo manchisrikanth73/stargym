@@ -31,6 +31,7 @@ export interface UserProfile {
   age: number | null;
   gender: string | null;
   scheduledDeleteAt: string | null;
+  promoWorkoutExpiry: string | null;
 }
 
 const usersRef = () => collection(db, 'users');
@@ -50,6 +51,7 @@ export async function createUserProfile(uid: string, email: string, displayName:
     age: age ?? null,
     gender: gender || null,
     scheduledDeleteAt: null,
+    promoWorkoutExpiry: null,
   });
 }
 

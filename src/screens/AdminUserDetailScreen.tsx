@@ -43,6 +43,8 @@ export default function AdminUserDetailScreen() {
   const [isActive, setIsActive] = useState(existing?.isActive ?? true);
   const [activationStartDate, setActivationStartDate] = useState(existing?.activationStartDate ?? '');
   const [activationEndDate, setActivationEndDate]     = useState(existing?.activationEndDate ?? '');
+  const [promoDays, setPromoDays] = useState('');
+  const [promoExpiry, setPromoExpiry] = useState<string | null>(existing?.promoWorkoutExpiry ?? null);
   const [saving, setSaving] = useState(false);
   const [disabling, setDisabling] = useState(false);
 
@@ -92,6 +94,30 @@ export default function AdminUserDetailScreen() {
       notify('Error', err.message ?? 'Failed to enable member.');
     } finally {
       setDisabling(false);
+    }
+  };
+
+  const handleGrantPromo = async () => {
+    const days = parseInt(promoDays.trim(), 10);
+    if (!days || days < 1) { notify('Invalid', 'Enter a number of days (minimum 1).'); return; }
+    const expiry = new Date();
+    expiry.setDate(expiry.getDate() + days);
+    const expiryStr = expiry.toISOString().slice(0, 10);
+    try {
+      await updateUserProfile(existing!.uid, { promoWorkoutExpiry: expiryStr });
+      setPromoExpiry(expiryStr);
+      setPromoDays('');
+    } catch (err: any) {
+      notify('Error', err.message ?? 'Failed to grant promo access.');
+    }
+  };
+
+  const handleRevokePromo = async () => {
+    try {
+      await updateUserProfile(existing!.uid, { promoWorkoutExpiry: null });
+      setPromoExpiry(null);
+    } catch (err: any) {
+      notify('Error', err.message ?? 'Failed to revoke promo access.');
     }
   };
 
@@ -218,6 +244,45 @@ export default function AdminUserDetailScreen() {
           onChange={setActivationEndDate}
         />
       </View>
+
+      {/* Promo Workout Access — existing members only */}
+      {!isNew && (
+        <View style={styles.section}>
+          <Label>Promo Workout Access</Label>
+          {promoExpiry && promoExpiry >= new Date().toISOString().slice(0, 10) ? (
+            <View style={styles.promoActiveRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.promoActiveLabel}>Active until</Text>
+                <Text style={styles.promoActiveDate}>{promoExpiry}</Text>
+              </View>
+              <TouchableOpacity style={styles.promoRevokeBtn} onPress={handleRevokePromo}>
+                <Ionicons name="close-circle-outline" size={15} color={colors.error} />
+                <Text style={styles.promoRevokeBtnText}>Revoke</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.promoGrantRow}>
+              <View style={styles.promoDaysWrap}>
+                <TextInput
+                  style={styles.promoDaysInput}
+                  placeholder="Days"
+                  placeholderTextColor={colors.textMuted}
+                  value={promoDays}
+                  onChangeText={t => setPromoDays(t.replace(/[^0-9]/g, ''))}
+                  keyboardType="number-pad"
+                />
+              </View>
+              <TouchableOpacity style={styles.promoGrantBtn} onPress={handleGrantPromo}>
+                <Ionicons name="gift-outline" size={15} color="#000" />
+                <Text style={styles.promoGrantBtnText}>Grant Access</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {promoExpiry && promoExpiry < new Date().toISOString().slice(0, 10) && (
+            <Text style={styles.promoExpiredNote}>Previous promo expired on {promoExpiry}</Text>
+          )}
+        </View>
+      )}
 
       {/* Active toggle */}
       <View style={styles.section}>
@@ -415,4 +480,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   enableBtnText: { color: colors.success, fontSize: 12, fontWeight: '700' },
+  promoActiveRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: `${colors.secondary}11`, borderRadius: 10,
+    borderWidth: 1, borderColor: `${colors.secondary}33`, padding: 12,
+  },
+  promoActiveLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4 },
+  promoActiveDate: { color: colors.secondary, fontSize: 15, fontWeight: '800', marginTop: 2 },
+  promoRevokeBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    borderWidth: 1, borderColor: `${colors.error}44`,
+    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7,
+  },
+  promoRevokeBtnText: { color: colors.error, fontSize: 12, fontWeight: '700' },
+  promoGrantRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  promoDaysWrap: {
+    width: 80, height: 42, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.bg, justifyContent: 'center', paddingHorizontal: 12,
+  },
+  promoDaysInput: { color: colors.text, fontSize: 15 },
+  promoGrantBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, height: 42, borderRadius: 10,
+    backgroundColor: colors.secondary,
+  },
+  promoGrantBtnText: { color: '#000', fontSize: 13, fontWeight: '800' },
+  promoExpiredNote: { color: colors.textDim, fontSize: 11, marginTop: 8 },
 });

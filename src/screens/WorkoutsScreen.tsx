@@ -90,25 +90,30 @@ export default function WorkoutsScreen() {
   const navigation = useNavigation<any>();
   const [expanded, setExpanded] = useState<string | null>(null);
   const [membershipType, setMembershipType] = useState<string>('basic');
+  const [promoExpiry, setPromoExpiry] = useState<string | null>(null);
+  const [planAccess, setPlanAccess] = useState<boolean>(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
-  const [isLocked, setIsLocked] = useState(false);
 
   useFocusEffect(useCallback(() => {
     const uid = auth.currentUser?.uid;
     if (uid) {
       getUserProfile(uid).then(p => {
         setMembershipType(p?.membershipType ?? 'basic');
+        setPromoExpiry(p?.promoWorkoutExpiry ?? null);
         setLoadingProfile(false);
       });
     } else {
       setLoadingProfile(false);
     }
     const unsubscribe = subscribeWorkoutAccess(wa => {
-      const plan = membershipType;
-      setIsLocked(!wa[plan as keyof typeof wa]);
+      setPlanAccess(!!wa[membershipType as keyof typeof wa]);
     });
     return unsubscribe;
   }, [membershipType]));
+
+  const today = new Date().toISOString().slice(0, 10);
+  const promoActive = !!promoExpiry && promoExpiry >= today;
+  const isLocked = !promoActive && !planAccess;
 
   const toggle = (id: string) => setExpanded(prev => prev === id ? null : id);
 
@@ -121,6 +126,13 @@ export default function WorkoutsScreen() {
         <Text style={styles.heading}>Workouts</Text>
         <View style={{ width: 28 }} />
       </View>
+
+      {promoActive && (
+        <View style={styles.promoBanner}>
+          <Ionicons name="gift-outline" size={14} color={colors.secondary} />
+          <Text style={styles.promoBannerText}>Promo access · expires {promoExpiry}</Text>
+        </View>
+      )}
 
       {isLocked ? (
         <View style={styles.lockedWrap}>
@@ -233,6 +245,14 @@ const styles = StyleSheet.create({
   },
   planChipText: { fontSize: 12, fontWeight: '800' },
   lockedSub: { color: colors.textDim, fontSize: 12, textAlign: 'center' },
+  promoBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginHorizontal: 16, marginBottom: 8,
+    backgroundColor: `${colors.secondary}18`,
+    borderWidth: 1, borderColor: `${colors.secondary}33`,
+    borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7,
+  },
+  promoBannerText: { color: colors.secondary, fontSize: 12, fontWeight: '600' },
 
   card: {
     backgroundColor: colors.surface, borderRadius: 16,
