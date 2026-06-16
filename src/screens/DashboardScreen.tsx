@@ -401,18 +401,13 @@ function ActionButton({
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={{ position: 'relative' }}>
-        <Ionicons name={icon as any} size={24} color={color} />
-        {locked && (
-          <Ionicons
-            name="lock-closed"
-            size={10}
-            color={colors.error}
-            style={{ position: 'absolute', bottom: -2, right: -4 }}
-          />
-        )}
-      </View>
-      <Text style={[styles.actionLabel, { color }]}>{label}</Text>
+      <Ionicons name={icon as any} size={24} color={locked ? colors.textDim : color} />
+      <Text style={[styles.actionLabel, { color: locked ? colors.textDim : color }]}>{label}</Text>
+      {locked && (
+        <View style={styles.actionLockOverlay} pointerEvents="none">
+          <Ionicons name="lock-closed" size={36} color="rgba(255,255,255,0.12)" />
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
@@ -516,6 +511,14 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
     gap: 8,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  actionLockOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionLabel: { fontSize: 11, fontWeight: '600' },
   motivCard: {
