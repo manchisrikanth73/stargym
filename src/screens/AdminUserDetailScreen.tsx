@@ -28,6 +28,11 @@ const MEMBERSHIP_COLORS: Record<MembershipType, string> = {
   vip: '#FFD700',
 };
 
+type PromoFeature = { key: string; label: string; profileField: 'promoWorkoutExpiry' };
+const PROMO_FEATURES: PromoFeature[] = [
+  { key: 'workout', label: 'Workouts', profileField: 'promoWorkoutExpiry' },
+];
+
 export default function AdminUserDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RouteParams, 'AdminUserDetail'>>();
@@ -44,7 +49,11 @@ export default function AdminUserDetailScreen() {
   const [activationStartDate, setActivationStartDate] = useState(existing?.activationStartDate ?? '');
   const [activationEndDate, setActivationEndDate]     = useState(existing?.activationEndDate ?? '');
   const [promoDays, setPromoDays] = useState('');
-  const [promoExpiry, setPromoExpiry] = useState<string | null>(existing?.promoWorkoutExpiry ?? null);
+  const [selectedPromo, setSelectedPromo] = useState<string>(PROMO_FEATURES[0].key);
+  const [promoDropdownOpen, setPromoDropdownOpen] = useState(false);
+  const [promoExpiries, setPromoExpiries] = useState<Record<string, string | null>>({
+    workout: existing?.promoWorkoutExpiry ?? null,
+  });
   const [saving, setSaving] = useState(false);
   const [disabling, setDisabling] = useState(false);
 
@@ -100,22 +109,24 @@ export default function AdminUserDetailScreen() {
   const handleGrantPromo = async () => {
     const days = parseInt(promoDays.trim(), 10);
     if (!days || days < 1) { notify('Invalid', 'Enter a number of days (minimum 1).'); return; }
+    const feature = PROMO_FEATURES.find(f => f.key === selectedPromo)!;
     const expiry = new Date();
     expiry.setDate(expiry.getDate() + days);
     const expiryStr = expiry.toISOString().slice(0, 10);
     try {
-      await updateUserProfile(existing!.uid, { promoWorkoutExpiry: expiryStr });
-      setPromoExpiry(expiryStr);
+      await updateUserProfile(existing!.uid, { [feature.profileField]: expiryStr });
+      setPromoExpiries(prev => ({ ...prev, [selectedPromo]: expiryStr }));
       setPromoDays('');
     } catch (err: any) {
       notify('Error', err.message ?? 'Failed to grant promo access.');
     }
   };
 
-  const handleRevokePromo = async () => {
+  const handleRevokePromo = async (key: string) => {
+    const feature = PROMO_FEATURES.find(f => f.key === key)!;
     try {
-      await updateUserProfile(existing!.uid, { promoWorkoutExpiry: null });
-      setPromoExpiry(null);
+      await updateUserProfile(existing!.uid, { [feature.profileField]: null });
+      setPromoExpiries(prev => ({ ...prev, [key]: null }));
     } catch (err: any) {
       notify('Error', err.message ?? 'Failed to revoke promo access.');
     }
@@ -245,42 +256,82 @@ export default function AdminUserDetailScreen() {
         />
       </View>
 
-      {/* Promo Workout Access — existing members only */}
+      {/* Promo Access — existing members only */}
       {!isNew && (
         <View style={styles.section}>
-          <Label>Promo Workout Access</Label>
-          {promoExpiry && promoExpiry >= new Date().toISOString().slice(0, 10) ? (
-            <View style={styles.promoActiveRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.promoActiveLabel}>Active until</Text>
-                <Text style={styles.promoActiveDate}>{promoExpiry}</Text>
-              </View>
-              <TouchableOpacity style={styles.promoRevokeBtn} onPress={handleRevokePromo}>
-                <Ionicons name="close-circle-outline" size={15} color={colors.error} />
-                <Text style={styles.promoRevokeBtnText}>Revoke</Text>
+          <Label>Promo Access</Label>
+          <View style={styles.promoGrantRow}>
+            {/* Feature dropdown */}
+            <View style={styles.promoDropdownWrap}>
+              <TouchableOpacity
+                style={styles.promoDropdown}
+                onPress={() => setPromoDropdownOpen(o => !o)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.promoDropdownText}>
+                  {PROMO_FEATURES.find(f => f.key === selectedPromo)?.label}
+                </Text>
+                <Ionicons name={promoDropdownOpen ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textMuted} />
               </TouchableOpacity>
+              {promoDropdownOpen && (
+                <View style={styles.promoDropdownMenu}>
+                  {PROMO_FEATURES.map(f => (
+                    <TouchableOpacity
+                      key={f.key}
+                      style={styles.promoDropdownItem}
+                      onPress={() => { setSelectedPromo(f.key); setPromoDropdownOpen(false); }}
+                    >
+                      <Text style={[styles.promoDropdownItemText, selectedPromo === f.key && { color: colors.primary }]}>
+                        {f.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </View>
-          ) : (
-            <View style={styles.promoGrantRow}>
-              <View style={styles.promoDaysWrap}>
-                <TextInput
-                  style={styles.promoDaysInput}
-                  placeholder="Days"
-                  placeholderTextColor={colors.textMuted}
-                  value={promoDays}
-                  onChangeText={t => setPromoDays(t.replace(/[^0-9]/g, ''))}
-                  keyboardType="number-pad"
-                />
-              </View>
-              <TouchableOpacity style={styles.promoGrantBtn} onPress={handleGrantPromo}>
-                <Ionicons name="gift-outline" size={15} color="#000" />
-                <Text style={styles.promoGrantBtnText}>Grant Access</Text>
-              </TouchableOpacity>
+            {/* Days input */}
+            <View style={styles.promoDaysWrap}>
+              <TextInput
+                style={styles.promoDaysInput}
+                placeholder="Days"
+                placeholderTextColor={colors.textMuted}
+                value={promoDays}
+                onChangeText={t => setPromoDays(t.replace(/[^0-9]/g, ''))}
+                keyboardType="number-pad"
+              />
             </View>
-          )}
-          {promoExpiry && promoExpiry < new Date().toISOString().slice(0, 10) && (
-            <Text style={styles.promoExpiredNote}>Previous promo expired on {promoExpiry}</Text>
-          )}
+            {/* Grant button */}
+            <TouchableOpacity style={styles.promoGrantBtn} onPress={handleGrantPromo}>
+              <Ionicons name="gift-outline" size={15} color="#000" />
+              <Text style={styles.promoGrantBtnText}>Grant</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Active promo list */}
+          {(() => {
+            const today = new Date().toISOString().slice(0, 10);
+            return PROMO_FEATURES.filter(f => promoExpiries[f.key]).map(f => {
+              const expiry = promoExpiries[f.key]!;
+              const active = expiry >= today;
+              return (
+                <View key={f.key} style={[styles.promoActiveRow, { marginTop: 10 }]}>
+                  <Ionicons name="gift-outline" size={14} color={active ? colors.secondary : colors.textDim} style={{ marginRight: 8 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.promoActiveFeature}>{f.label}</Text>
+                    <Text style={[styles.promoActiveLabel, !active && { color: colors.textDim }]}>
+                      {active ? `Active · expires ${expiry}` : `Expired ${expiry}`}
+                    </Text>
+                  </View>
+                  {active && (
+                    <TouchableOpacity style={styles.promoRevokeBtn} onPress={() => handleRevokePromo(f.key)}>
+                      <Ionicons name="close-circle-outline" size={15} color={colors.error} />
+                      <Text style={styles.promoRevokeBtnText}>Revoke</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            });
+          })()}
         </View>
       )}
 
@@ -480,31 +531,42 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   enableBtnText: { color: colors.success, fontSize: 12, fontWeight: '700' },
-  promoActiveRow: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: `${colors.secondary}11`, borderRadius: 10,
-    borderWidth: 1, borderColor: `${colors.secondary}33`, padding: 12,
+  promoGrantRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  promoDropdownWrap: { flex: 1, position: 'relative' as any, zIndex: 10 },
+  promoDropdown: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    height: 42, borderRadius: 10, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.bg, paddingHorizontal: 12,
   },
-  promoActiveLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4 },
-  promoActiveDate: { color: colors.secondary, fontSize: 15, fontWeight: '800', marginTop: 2 },
-  promoRevokeBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    borderWidth: 1, borderColor: `${colors.error}44`,
-    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7,
+  promoDropdownText: { color: colors.text, fontSize: 13, fontWeight: '600' },
+  promoDropdownMenu: {
+    position: 'absolute' as any, top: 44, left: 0, right: 0,
+    backgroundColor: colors.surface, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.border,
+    shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
   },
-  promoRevokeBtnText: { color: colors.error, fontSize: 12, fontWeight: '700' },
-  promoGrantRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  promoDropdownItem: { paddingHorizontal: 14, paddingVertical: 12 },
+  promoDropdownItemText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
   promoDaysWrap: {
-    width: 80, height: 42, borderRadius: 10,
+    width: 72, height: 42, borderRadius: 10,
     borderWidth: 1, borderColor: colors.border,
     backgroundColor: colors.bg, justifyContent: 'center', paddingHorizontal: 12,
   },
-  promoDaysInput: { color: colors.text, fontSize: 15 },
+  promoDaysInput: { color: colors.text, fontSize: 14 },
   promoGrantBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, height: 42, borderRadius: 10,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 5, height: 42, borderRadius: 10, paddingHorizontal: 14,
     backgroundColor: colors.secondary,
   },
   promoGrantBtnText: { color: '#000', fontSize: 13, fontWeight: '800' },
-  promoExpiredNote: { color: colors.textDim, fontSize: 11, marginTop: 8 },
+  promoActiveRow: { flexDirection: 'row', alignItems: 'center' },
+  promoActiveFeature: { color: colors.text, fontSize: 13, fontWeight: '700' },
+  promoActiveLabel: { color: colors.secondary, fontSize: 11, fontWeight: '600', marginTop: 1 },
+  promoRevokeBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    borderWidth: 1, borderColor: `${colors.error}44`,
+    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
+  },
+  promoRevokeBtnText: { color: colors.error, fontSize: 12, fontWeight: '700' },
 });
