@@ -42,6 +42,7 @@ export default function DashboardScreen() {
   const [memberActive, setMemberActive] = useState(0);
   const [memberInactive, setMemberInactive] = useState(0);
   const [showGymQR, setShowGymQR] = useState(false);
+  const [showAllCheckins, setShowAllCheckins] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [recentCheckins, setRecentCheckins] = useState<{ name: string; email: string; time: string }[]>([]);
   const [activationStartDate, setActivationStartDate] = useState<string | null>(null);
@@ -331,7 +332,14 @@ export default function DashboardScreen() {
       {/* Admin: recent check-ins / Member: motivation */}
       {isAdmin ? (
         <>
-          <Text style={styles.sectionTitle}>Recent Check-ins (Last 24h)</Text>
+          <View style={styles.sectionTitleRow}>
+            <Text style={[styles.sectionTitle, { marginHorizontal: 0, marginBottom: 0 }]}>Recent Check-ins (Last 24h)</Text>
+            {recentCheckins.length > 1 && (
+              <TouchableOpacity onPress={() => setShowAllCheckins(true)}>
+                <Text style={styles.moreLink}>more</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           {recentCheckins.length === 0 ? (
             <View style={styles.emptyCheckins}>
               <Ionicons name="time-outline" size={28} color={colors.textDim} />
@@ -339,8 +347,8 @@ export default function DashboardScreen() {
             </View>
           ) : (
             <View style={styles.checkinList}>
-              {recentCheckins.map((item, i) => (
-                <View key={i} style={[styles.checkinRow, i < recentCheckins.length - 1 && styles.checkinRowBorder]}>
+              {[recentCheckins[0]].map((item, i) => (
+                <View key={i} style={styles.checkinRow}>
                   <View style={styles.checkinAvatar}>
                     <Text style={styles.checkinAvatarText}>{item.name[0]?.toUpperCase() ?? '?'}</Text>
                   </View>
@@ -353,6 +361,34 @@ export default function DashboardScreen() {
               ))}
             </View>
           )}
+
+          {/* All check-ins modal */}
+          <Modal visible={showAllCheckins} transparent animationType="fade">
+            <View style={styles.overlay}>
+              <View style={styles.allCheckinsModal}>
+                <View style={styles.allCheckinsHeader}>
+                  <Text style={styles.allCheckinsTitle}>All Check-ins (Last 24h)</Text>
+                  <TouchableOpacity onPress={() => setShowAllCheckins(false)}>
+                    <Ionicons name="close" size={22} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
+                <ScrollView style={styles.allCheckinsScroll} showsVerticalScrollIndicator={false}>
+                  {recentCheckins.map((item, i) => (
+                    <View key={i} style={[styles.checkinRow, i < recentCheckins.length - 1 && styles.checkinRowBorder]}>
+                      <View style={styles.checkinAvatar}>
+                        <Text style={styles.checkinAvatarText}>{item.name[0]?.toUpperCase() ?? '?'}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.checkinName}>{item.name}</Text>
+                        <Text style={styles.checkinEmail}>{item.email}</Text>
+                      </View>
+                      <Text style={styles.checkinTime}>{item.time}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+          </Modal>
         </>
       ) : (
         <View style={styles.motivCard}>
@@ -640,4 +676,18 @@ const styles = StyleSheet.create({
     alignItems: 'center', gap: 10,
   },
   emptyCheckinsText: { color: colors.textDim, fontSize: 13 },
+  sectionTitleRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginHorizontal: 20, marginBottom: 14,
+  },
+  moreLink: { color: colors.primary, fontSize: 13, fontWeight: '600' },
+  allCheckinsModal: {
+    width: '100%', maxHeight: '75%', backgroundColor: colors.surface,
+    borderRadius: 20, padding: 20,
+  },
+  allCheckinsHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16,
+  },
+  allCheckinsTitle: { color: colors.text, fontSize: 16, fontWeight: '800' },
+  allCheckinsScroll: { flexGrow: 0 },
 });
