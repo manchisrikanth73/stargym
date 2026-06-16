@@ -406,9 +406,7 @@ function ActionButton({
       )}
       {locked && (
         <View style={styles.actionLockOverlay} pointerEvents="none">
-          <View style={styles.actionLockCircle}>
-            <Ionicons name="lock-closed" size={28} color={colors.error} style={{ opacity: 0.5 }} />
-          </View>
+          <Ionicons name="lock-closed" size={32} color={colors.error} style={{ opacity: 0.45 }} />
         </View>
       )}
     </TouchableOpacity>
@@ -530,12 +528,6 @@ const styles = StyleSheet.create({
     top: 0, left: 0, right: 0, bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  actionLockCircle: {
-    width: 52, height: 52, borderRadius: 26,
-    borderWidth: 2, borderColor: colors.error,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.35)',
   },
   actionLabel: { fontSize: 11, fontWeight: '600' },
   motivCard: {
