@@ -311,23 +311,21 @@ export default function DashboardScreen() {
           ? <ActionButton icon="settings-outline" label="Settings" color="#9B59B6" onPress={() => navigation.navigate('Settings')} />
           : <ActionButton icon="bar-chart" label="Progress" color="#9B59B6" onPress={() => navigation.navigate('Progress' as never)} />
         }
-        <ActionButton
-          icon="barbell"
-          label="Workouts"
-          color="#E74C3C"
-          locked={!isAdmin && !!membershipType && !workoutAccess[membershipType as keyof WorkoutAccess]}
-          onPress={() => {
-            if (!isAdmin && membershipType && !workoutAccess[membershipType as keyof WorkoutAccess]) {
-              const allowed = (['premium', 'vip', 'basic'] as const).filter(p => workoutAccess[p]);
-              const hint = allowed.length ? allowed.join(' & ') + ' plans only' : 'Not available';
-              if (typeof window !== 'undefined') {
-                (window as any).alert(`Workouts not available on your plan.\n${hint}`);
-              }
-              return;
-            }
-            navigation.navigate('Workouts' as never);
-          }}
-        />
+        {(() => {
+          const isLocked = !isAdmin && !!membershipType && !workoutAccess[membershipType as keyof WorkoutAccess];
+          const allowed = (['premium', 'vip', 'basic'] as const).filter(p => workoutAccess[p]);
+          const lockHint = allowed.length ? allowed.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' & ') + ' only' : 'Not available';
+          return (
+            <ActionButton
+              icon="barbell"
+              label="Workouts"
+              color="#E74C3C"
+              locked={isLocked}
+              lockHint={isLocked ? lockHint : undefined}
+              onPress={() => { if (!isLocked) navigation.navigate('Workouts' as never); }}
+            />
+          );
+        })()}
       </View>
 
       {/* Admin: recent check-ins / Member: motivation */}
@@ -391,21 +389,29 @@ export default function DashboardScreen() {
 }
 
 function ActionButton({
-  icon, label, color, onPress, locked,
+  icon, label, color, onPress, locked, lockHint,
 }: {
-  icon: string; label: string; color: string; onPress: () => void; locked?: boolean;
+  icon: string; label: string; color: string; onPress: () => void; locked?: boolean; lockHint?: string;
 }) {
   return (
     <TouchableOpacity
-      style={[styles.actionBtn, { borderColor: `${color}44`, backgroundColor: `${color}18` }]}
+      style={[
+        styles.actionBtn,
+        locked
+          ? { borderColor: colors.error, backgroundColor: `${colors.error}12` }
+          : { borderColor: `${color}44`, backgroundColor: `${color}18` },
+      ]}
       onPress={onPress}
-      activeOpacity={0.7}
+      activeOpacity={locked ? 1 : 0.7}
     >
       <Ionicons name={icon as any} size={24} color={locked ? colors.textDim : color} />
       <Text style={[styles.actionLabel, { color: locked ? colors.textDim : color }]}>{label}</Text>
+      {locked && lockHint && (
+        <Text style={styles.actionLockHint}>{lockHint}</Text>
+      )}
       {locked && (
         <View style={styles.actionLockOverlay} pointerEvents="none">
-          <Ionicons name="lock-closed" size={36} color="rgba(255,255,255,0.12)" />
+          <Ionicons name="lock-closed" size={36} color="rgba(255,255,255,0.08)" />
         </View>
       )}
     </TouchableOpacity>
@@ -513,6 +519,14 @@ const styles = StyleSheet.create({
     gap: 8,
     overflow: 'hidden',
     position: 'relative',
+  },
+  actionLockHint: {
+    color: colors.error,
+    fontSize: 9,
+    fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: 0.3,
+    paddingHorizontal: 4,
   },
   actionLockOverlay: {
     position: 'absolute',
