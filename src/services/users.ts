@@ -80,7 +80,7 @@ export async function disableMember(uid: string): Promise<void> {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() + 60);
   const scheduledDeleteAt = cutoff.toISOString().slice(0, 10);
-  await updateDoc(doc(usersRef(), uid), { isActive: false, scheduledDeleteAt });
+  await updateDoc(doc(usersRef(), uid), { isActive: false, scheduledDeleteAt, promoWorkoutExpiry: null });
 }
 
 export async function enableMember(uid: string): Promise<void> {
