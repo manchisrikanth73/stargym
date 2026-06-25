@@ -44,6 +44,7 @@ export default function AdminUserDetailScreen() {
   const [phone, setPhone] = useState(existing?.phone ?? '');
   const [age, setAge] = useState(existing?.age != null ? String(existing.age) : '');
   const [gender, setGender] = useState(existing?.gender ?? '');
+  const [weightKg, setWeightKg] = useState(existing?.weightKg != null ? String(existing.weightKg) : '');
   const [membershipType, setMembershipType] = useState<MembershipType>(existing?.membershipType ?? 'basic');
   const [isActive, setIsActive] = useState(existing?.isActive ?? true);
   const [activationStartDate, setActivationStartDate] = useState(existing?.activationStartDate ?? '');
@@ -146,13 +147,15 @@ export default function AdminUserDetailScreen() {
         activationEndDate: endDate,
       };
       const parsedAge = age.trim() ? parseInt(age.trim(), 10) : null;
+      const parsedWeightKg = weightKg.trim() ? parseFloat(weightKg.trim()) : null;
       const personalData = {
         age: parsedAge,
         gender: gender || null,
+        weightKg: parsedWeightKg,
       };
       if (isNew) {
         const placeholderId = `manual_${Date.now()}`;
-        await createUserProfile(placeholderId, email.trim(), displayName.trim(), parsedAge, gender);
+        await createUserProfile(placeholderId, email.trim(), displayName.trim(), parsedAge, gender, parsedWeightKg);
         await updateUserProfile(placeholderId, { phone, membershipType, isActive: resolvedActive, ...dates });
       } else {
         await updateUserProfile(existing!.uid, { displayName: displayName.trim(), email: email.trim(), phone, membershipType, isActive: resolvedActive, ...dates, ...personalData });
@@ -219,6 +222,9 @@ export default function AdminUserDetailScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+        <Label>Weight (kg)</Label>
+        <Field icon="barbell-outline" placeholder="e.g. 75" value={weightKg} onChangeText={t => setWeightKg(t.replace(/[^0-9.]/g, ''))} keyboardType="decimal-pad" />
       </View>
 
       {/* Membership type */}

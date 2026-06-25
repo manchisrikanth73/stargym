@@ -75,6 +75,7 @@ export default function DashboardScreen() {
     setCheckedIn(ci);
     setMonthlyCount(mc);
     if (workoutLog && workoutLog.exercises.length > 0) {
+      const bodyWeight = profile?.weightKg ?? 70;
       const kcal = Math.round(workoutLog.exercises.reduce((acc, ex) => {
         const exDef = EXERCISES.find(e => e.name === ex.name);
         const tracking = exDef?.tracking ?? 'weighted';
@@ -83,7 +84,7 @@ export default function DashboardScreen() {
           weight: s.weight,
           duration: tracking === 'duration' ? s.reps : 0,
         }));
-        return acc + calcExerciseCalories(ex.name, tracking, sets);
+        return acc + calcExerciseCalories(ex.name, tracking, sets, bodyWeight);
       }, 0));
       setTodayCalories(kcal);
     } else {

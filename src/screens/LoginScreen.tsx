@@ -22,6 +22,7 @@ export default function LoginScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('');
+  const [weight, setWeight] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -49,7 +50,8 @@ export default function LoginScreen() {
     try {
       if (isSignUp) {
         const parsedAge = age.trim() ? parseInt(age.trim(), 10) : null;
-        await signUp(email.trim(), password, name.trim(), parsedAge, gender);
+        const parsedWeight = weight.trim() ? parseFloat(weight.trim()) : null;
+        await signUp(email.trim(), password, name.trim(), parsedAge, gender, parsedWeight);
       } else {
         await signIn(email.trim(), password);
       }
@@ -92,6 +94,7 @@ export default function LoginScreen() {
     setConfirmPassword('');
     setAge('');
     setGender('');
+    setWeight('');
     clearError();
   };
 
@@ -158,6 +161,18 @@ export default function LoginScreen() {
                     <Text style={[styles.genderBtnText, gender === g && styles.genderBtnTextActive]}>{g}</Text>
                   </TouchableOpacity>
                 ))}
+              </View>
+              <View style={styles.inputWrap}>
+                <Ionicons name="barbell-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Weight (kg)"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="decimal-pad"
+                  maxLength={6}
+                  value={weight}
+                  onChangeText={t => { setWeight(t.replace(/[^0-9.]/g, '')); clearError(); }}
+                />
               </View>
             </>
           )}
@@ -257,7 +272,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           {/* Toggle */}
-          <TouchableOpacity onPress={() => { setIsSignUp(v => !v); setName(''); setConfirmPassword(''); setAge(''); setGender(''); clearError(); }} style={styles.toggleBtn}>
+          <TouchableOpacity onPress={() => { setIsSignUp(v => !v); setName(''); setConfirmPassword(''); setAge(''); setGender(''); setWeight(''); clearError(); }} style={styles.toggleBtn}>
             <Text style={styles.toggleText}>
               {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
               <Text style={styles.toggleLink}>{isSignUp ? 'Log In' : 'Sign Up'}</Text>

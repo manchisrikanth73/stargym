@@ -16,6 +16,7 @@ export interface UserProfile {
   activationEndDate: string | null;
   age: number | null;
   gender: string | null;
+  weightKg: number | null;
   scheduledDeleteAt: string | null;
   promoWorkoutExpiry: string | null;
 }
@@ -26,10 +27,11 @@ export async function createUserProfile(
   displayName: string,
   age: number | null = null,
   gender = '',
+  weightKg: number | null = null,
 ): Promise<void> {
   const res = await apiFetch('/auth/profile', {
     method: 'POST',
-    body: JSON.stringify({ uid, email, displayName, age, gender }),
+    body: JSON.stringify({ uid, email, displayName, age, gender, weightKg }),
   });
   if (!res.ok) throw new Error(await res.text());
 }

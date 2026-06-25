@@ -91,28 +91,17 @@ const HIIT_EXERCISES = new Set([
   'Kettlebell Swing', 'Medicine Ball Slam',
 ]);
 
-// Reference body weight used when actual weight is unknown.
-const BODY_WEIGHT_KG = 70;
-
 export type SetCalcInput = {
   reps: number;
   weight: number | null;
   duration: number; // minutes; 0 for non-duration exercises
 };
 
-/**
- * Returns estimated kcal burned for a single exercise given its completed sets.
- * Formula: MET × 70 kg × time_hours  (standard Compendium method).
- *
- * Time is estimated from actual rep counts so heavy/light sets are differentiated:
- *   weighted   — reps × 3 s work + 120 s rest per set
- *   reps_only  — reps × 3 s work + 90 s rest  (HIIT: 1.5 s/rep + 60 s rest)
- *   duration   — actual minutes logged
- */
 export function calcExerciseCalories(
   name: string,
   tracking: ExerciseTracking,
   completedSets: SetCalcInput[],
+  weightKg = 70,
 ): number {
   if (completedSets.length === 0) return 0;
 
@@ -137,5 +126,5 @@ export function calcExerciseCalories(
   }
 
   if (minutes <= 0) return 0;
-  return met * BODY_WEIGHT_KG * (minutes / 60);
+  return met * weightKg * (minutes / 60);
 }

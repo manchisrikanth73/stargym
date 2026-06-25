@@ -11,6 +11,8 @@ import {
   logWorkout, getTodayLog, getPreviousExercise,
   LoggedExercise, WorkoutSet,
 } from '../services/workouts';
+import { getUserProfile } from '../services/users';
+import { auth } from '../services/firebase';
 import { calcExerciseCalories } from '../utils/calories';
 
 type WorkoutParam = { id: string; title: string; color: string };
@@ -43,11 +45,18 @@ export default function WorkoutLogScreen() {
   const [exercises, setExercises] = useState<ExerciseEntry[]>([]);
   const [unit, setUnit] = useState<'kg' | 'lbs'>('kg');
   const [loading, setLoading] = useState(true);
+  const [userWeightKg, setUserWeightKg] = useState(70);
   const [picker, setPicker] = useState<{
     exId: string; idx: number; field: 'weight' | 'reps' | 'duration'; options: number[]; current: string;
   } | null>(null);
 
   useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    if (uid) {
+      getUserProfile(uid).then(p => {
+        if (p?.weightKg != null) setUserWeightKg(p.weightKg);
+      }).catch(() => {});
+    }
     getTodayLog()
       .then(log => {
         if (!log || log.exercises.length === 0) return;
@@ -243,7 +252,7 @@ export default function WorkoutLogScreen() {
         weight: ex.tracking === 'weighted' && s.weight ? parseFloat(s.weight) : null,
         duration: ex.tracking === 'duration' ? parseFloat(s.duration) || 0 : 0,
       }));
-    return acc + calcExerciseCalories(ex.name, ex.tracking, completedSets);
+    return acc + calcExerciseCalories(ex.name, ex.tracking, completedSets, userWeightKg);
   }, 0));
 
   if (loading) {

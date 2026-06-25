@@ -35,6 +35,7 @@ export default function SettingsScreen() {
   const [phone, setPhone]         = useState('');
   const [age, setAge]             = useState('');
   const [gender, setGender]       = useState('');
+  const [weightKg, setWeightKg]   = useState('');
   const [original, setOriginal] = useState({ firstName: '', lastName: '', email: '', phone: '' });
 
   const [prices, setPrices] = useState<MembershipPrices>({ basic: 0, premium: 0, vip: 0 });
@@ -55,6 +56,7 @@ export default function SettingsScreen() {
       setFirstName(fn); setLastName(ln); setEmail(em); setPhone(ph);
       setAge(profile?.age != null ? String(profile.age) : '');
       setGender(profile?.gender ?? '');
+      setWeightKg(profile?.weightKg != null ? String(profile.weightKg) : '');
       setOriginal({ firstName: fn, lastName: ln, email: em, phone: ph });
       const admin = profile?.role === 'admin';
       setIsAdmin(admin);
@@ -96,10 +98,12 @@ export default function SettingsScreen() {
     try {
       const displayName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ');
       await updateProfile(user, { displayName });
-      const update: Record<string, string> = { displayName };
+      const update: Record<string, any> = { displayName };
       if (isAdmin) {
         update.email = email.trim();
         update.phone = phone.trim();
+      } else {
+        update.weightKg = weightKg.trim() ? parseFloat(weightKg.trim()) : null;
       }
       await updateUserProfile(user.uid, update);
       if (isAdmin && editingPrices) {
@@ -173,6 +177,8 @@ export default function SettingsScreen() {
                 <Field label="Age" value={age || '—'} onChange={() => {}} editable={false} />
                 <View style={styles.fieldDivider} />
                 <Field label="Gender" value={gender || '—'} onChange={() => {}} editable={false} />
+                <View style={styles.fieldDivider} />
+                <Field label="Weight (kg)" value={weightKg} onChange={t => setWeightKg(t.replace(/[^0-9.]/g, ''))} placeholder="e.g. 75" keyboardType="decimal-pad" autoCapitalize="none" />
               </>
             )}
           </View>

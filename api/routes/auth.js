@@ -14,7 +14,7 @@ function serializeDoc(data) {
 
 router.post('/profile', requireAuth, async (req, res) => {
   const uid = req.uid;
-  const { email, displayName, age = null, gender = '' } = req.body;
+  const { email, displayName, age = null, gender = '', weightKg = null } = req.body;
   if (!email || !displayName) {
     return res.status(400).json({ error: 'email and displayName required' });
   }
@@ -33,6 +33,7 @@ router.post('/profile', requireAuth, async (req, res) => {
       activationEndDate: null,
       age: age ?? null,
       gender: gender || null,
+      weightKg: weightKg ?? null,
       scheduledDeleteAt: null,
       promoWorkoutExpiry: null,
     });
