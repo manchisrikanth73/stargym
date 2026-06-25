@@ -1,0 +1,131 @@
+const router = require('express').Router();
+const { requireAuth, requireAdmin } = require('../middleware/auth');
+const admin = require('../admin');
+
+const db = () => admin.firestore();
+const SAFE_MEMBER_FIELDS = ['displayName', 'phone', 'age', 'gender'];
+
+function serializeDoc(data) {
+  const out = {};
+  for (const [k, v] of Object.entries(data)) {
+    out[k] = v?.toDate ? v.toDate().toISOString() : v;
+  }
+  return out;
+}
+
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+router.get('/', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const todayStr = today();
+    const snap = await db().collection('users').orderBy('joinedAt', 'desc').get();
+    const toDelete = [];
+    const users = [];
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      if (data.scheduledDeleteAt && data.scheduledDeleteAt <= todayStr) {
+        toDelete.push(doc.ref);
+      } else {
+        users.push(serializeDoc(data));
+      }
+    }
+    if (toDelete.length) {
+      const batch = db().batch();
+      toDelete.forEach(ref => batch.delete(ref));
+      await batch.commit();
+    }
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/:uid', requireAuth, async (req, res) => {
+  if (!req.isAdmin && req.uid !== req.params.uid) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  try {
+    const snap = await db().doc(`users/${req.params.uid}`).get();
+    if (!snap.exists) return res.status(404).json({ error: 'Not found' });
+    res.json(serializeDoc(snap.data()));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { email, displayName, phone = '', membershipType = 'basic',
+            activationStartDate = null, activationEndDate = null,
+            isActive = false, age = null, gender = null } = req.body;
+    const uid = `manual_${Date.now()}`;
+    await db().doc(`users/${uid}`).set({
+      uid, email, displayName, phone, role: 'member',
+      membershipType, isActive,
+      joinedAt: admin.FieldValue.serverTimestamp(),
+      activationStartDate, activationEndDate,
+      age, gender, scheduledDeleteAt: null, promoWorkoutExpiry: null,
+    });
+    res.status(201).json({ uid });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch('/:uid', requireAuth, async (req, res) => {
+  if (!req.isAdmin && req.uid !== req.params.uid) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  try {
+    let data = req.body;
+    if (!req.isAdmin) {
+      data = Object.fromEntries(
+        Object.entries(data).filter(([k]) => SAFE_MEMBER_FIELDS.includes(k))
+      );
+    }
+    await db().doc(`users/${req.params.uid}`).update(data);
+    res.json({});
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/:uid', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await db().doc(`users/${req.params.uid}`).delete();
+    res.status(204).send();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:uid/disable', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() + 60);
+    await db().doc(`users/${req.params.uid}`).update({
+      isActive: false,
+      scheduledDeleteAt: cutoff.toISOString().slice(0, 10),
+      promoWorkoutExpiry: null,
+    });
+    res.json({});
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:uid/enable', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await db().doc(`users/${req.params.uid}`).update({
+      isActive: true,
+      scheduledDeleteAt: null,
+    });
+    res.json({});
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+module.exports = router;

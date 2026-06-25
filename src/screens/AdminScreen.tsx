@@ -187,7 +187,7 @@ export default function AdminScreen() {
                   <Text style={styles.historyEmpty}>No check-ins in the last 60 days.</Text>
                 ) : (
                   history.map((item, i) => {
-                    const time = item.checkedInAt ? dayjs(item.checkedInAt.toDate()).format('h:mm A') : '—';
+                    const time = item.checkedInAt ? dayjs(item.checkedInAt).format('h:mm A') : '—';
                     return (
                       <View key={item.date} style={[styles.historyRow, i < history.length - 1 && styles.historyRowBorder]}>
                         <Ionicons name="checkmark-circle" size={16} color={colors.success} />

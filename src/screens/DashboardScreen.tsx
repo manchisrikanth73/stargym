@@ -101,7 +101,7 @@ export default function DashboardScreen() {
     if (!isAdmin) return;
     return subscribeRecentCheckins(records => {
       setRecentCheckins(records.map(r => {
-        const d = dayjs(r.checkedInAt.toDate());
+        const d = dayjs(r.checkedInAt);
         const time = d.isSame(dayjs(), 'day')
           ? `Today ${d.format('h:mm A')}`
           : `Yesterday ${d.format('h:mm A')}`;

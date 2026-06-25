@@ -1,5 +1,4 @@
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
-import { db } from './firebase';
+import { apiFetch, apiSSE } from './api';
 
 export type MembershipPrices = {
   basic: number;
@@ -13,41 +12,34 @@ export type WorkoutAccess = {
   vip: boolean;
 };
 
-const settingsRef = () => doc(db, 'gymConfig', 'membership');
-
 export async function getMembershipPrices(): Promise<MembershipPrices> {
-  const snap = await getDoc(settingsRef());
-  if (!snap.exists()) return { basic: 0, premium: 0, vip: 0 };
-  const d = snap.data();
-  return { basic: d.basic ?? 0, premium: d.premium ?? 0, vip: d.vip ?? 0 };
+  const res = await apiFetch('/settings/membership');
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
 }
 
 export async function setMembershipPrices(prices: MembershipPrices): Promise<void> {
-  await setDoc(settingsRef(), prices, { merge: true });
+  const res = await apiFetch('/settings/membership', {
+    method: 'PUT',
+    body: JSON.stringify(prices),
+  });
+  if (!res.ok) throw new Error(await res.text());
 }
 
 export async function getWorkoutAccess(): Promise<WorkoutAccess> {
-  const snap = await getDoc(settingsRef());
-  if (!snap.exists()) return { basic: false, premium: true, vip: true };
-  const d = snap.data()?.workoutAccess ?? {};
-  return {
-    basic:   d.basic   ?? false,
-    premium: d.premium ?? true,
-    vip:     d.vip     ?? true,
-  };
+  const res = await apiFetch('/settings/workout-access');
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
 }
 
 export async function setWorkoutAccess(access: WorkoutAccess): Promise<void> {
-  await setDoc(settingsRef(), { workoutAccess: access }, { merge: true });
+  const res = await apiFetch('/settings/workout-access', {
+    method: 'PUT',
+    body: JSON.stringify(access),
+  });
+  if (!res.ok) throw new Error(await res.text());
 }
 
 export function subscribeWorkoutAccess(cb: (access: WorkoutAccess) => void): () => void {
-  return onSnapshot(settingsRef(), snap => {
-    const d = snap.data()?.workoutAccess ?? {};
-    cb({
-      basic:   d.basic   ?? false,
-      premium: d.premium ?? true,
-      vip:     d.vip     ?? true,
-    });
-  });
+  return apiSSE('/sse/workout-access', data => cb(data as WorkoutAccess));
 }

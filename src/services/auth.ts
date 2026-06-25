@@ -8,7 +8,7 @@ import {
   User,
 } from 'firebase/auth';
 import { auth } from './firebase';
-import { createUserProfile, getUserProfile } from './users';
+import { createUserProfile } from './users';
 import { sendNewMemberNotification } from './email';
 
 export const signUp = async (email: string, password: string, displayName: string, age: number | null = null, gender = '') => {
@@ -19,19 +19,21 @@ export const signUp = async (email: string, password: string, displayName: strin
     sendNewMemberNotification(displayName, email).catch(err => console.error('[EmailJS]', err));
     return cred;
   } catch (err: any) {
-    // Auth account exists but Firestore profile was deleted by admin — re-create the profile
     if (err.code === 'auth/email-already-in-use') {
       try {
         const signInCred = await signInWithEmailAndPassword(auth, email, password);
-        const profile = await getUserProfile(signInCred.user.uid);
-        if (!profile) {
+        const token = await signInCred.user.getIdToken();
+        const res = await fetch('/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (res.status === 404) {
           await updateProfile(signInCred.user, { displayName });
           await createUserProfile(signInCred.user.uid, email, displayName, age, gender);
           sendNewMemberNotification(displayName, email).catch(err2 => console.error('[EmailJS]', err2));
           return signInCred;
         }
       } catch {
-        // Sign-in failed with these credentials — email is genuinely taken
+        // Sign-in failed — email is genuinely taken
       }
     }
     throw err;
@@ -51,8 +53,15 @@ export const onAuthChange = (cb: (user: User | null) => void) =>
 export const currentUser = () => auth.currentUser;
 
 export const ensureUserProfile = async (user: User) => {
-  const existing = await getUserProfile(user.uid);
-  if (!existing) {
-    await createUserProfile(user.uid, user.email ?? '', user.displayName ?? user.email?.split('@')[0] ?? 'Member');
+  const token = await user.getIdToken();
+  const res = await fetch('/api/auth/me', {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (res.status === 404) {
+    await createUserProfile(
+      user.uid,
+      user.email ?? '',
+      user.displayName ?? user.email?.split('@')[0] ?? 'Member',
+    );
   }
 };
