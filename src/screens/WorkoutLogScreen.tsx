@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, Modal, FlatList,
@@ -28,24 +28,12 @@ function emptySet(): SetEntry {
   return { reps: '', weight: '', duration: '', completed: false };
 }
 
-function formatTime(sec: number): string {
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-function resolveTracking(name: string): ExerciseTracking {
-  return EXERCISES.find(e => e.name === name)?.tracking ?? 'weighted';
-}
-
 export default function WorkoutLogScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const [workoutType, setWorkoutType] = useState<WorkoutParam | undefined>(
     () => route.params?.workoutType as WorkoutParam | undefined
   );
-  // Keep workoutType in sync whenever route.params provides it
-  // (covers web timing edge cases and screen-reuse scenarios)
   const routeWT = route.params?.workoutType as WorkoutParam | undefined;
   useEffect(() => {
     if (routeWT?.id) setWorkoutType(routeWT);
@@ -54,20 +42,9 @@ export default function WorkoutLogScreen() {
   const [exercises, setExercises] = useState<ExerciseEntry[]>([]);
   const [unit, setUnit] = useState<'kg' | 'lbs'>('kg');
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [elapsed, setElapsed] = useState(0);
-  const startRef = useRef(Date.now());
   const [picker, setPicker] = useState<{
     exId: string; idx: number; field: 'weight' | 'reps' | 'duration'; options: number[]; current: string;
   } | null>(null);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - startRef.current) / 1000));
-    }, 1000);
-    return () => clearInterval(id);
-  }, []);
 
   useEffect(() => {
     getTodayLog()
@@ -77,8 +54,6 @@ export default function WorkoutLogScreen() {
         const relevant = wtId
           ? log.exercises.filter(e => {
               if (e.workoutType === wtId) return true;
-              // Also match by exercise section — catches entries saved when
-              // workoutType was undefined (stored with muscle name instead of section id)
               const exDef = EXERCISES.find(ex => ex.name === e.name);
               return exDef?.sections.includes(wtId as any) ?? false;
             })
@@ -200,12 +175,29 @@ export default function WorkoutLogScreen() {
   };
 
   const toggleComplete = (exId: string, idx: number) => {
-    setExercises(prev =>
-      prev.map(e => {
-        if (e.id !== exId) return e;
-        return { ...e, sets: e.sets.map((s, i) => i === idx ? { ...s, completed: !s.completed } : s) };
-      })
-    );
+    const updated = exercises.map(e => {
+      if (e.id !== exId) return e;
+      return { ...e, sets: e.sets.map((s, i) => i === idx ? { ...s, completed: !s.completed } : s) };
+    });
+    setExercises(updated);
+
+    const completedExercises = updated
+      .map(e => ({ ...e, sets: e.sets.filter(s => s.completed) }))
+      .filter(e => e.sets.length > 0);
+
+    if (completedExercises.length > 0) {
+      const payload: LoggedExercise[] = completedExercises.map(e => ({
+        id: e.id,
+        name: e.name,
+        workoutType: e.workoutTypeId,
+        sets: e.sets.map(s => ({
+          reps: e.tracking === 'duration' ? parseFloat(s.duration) : parseInt(s.reps, 10),
+          weight: e.tracking === 'weighted' && s.weight.trim() !== '' ? parseFloat(s.weight) : null,
+          unit,
+        })) as WorkoutSet[],
+      }));
+      logWorkout(payload).catch(() => {});
+    }
   };
 
   const removeExercise = (id: string) => {
@@ -243,54 +235,6 @@ export default function WorkoutLogScreen() {
     }, 0);
   }, 0);
 
-  const handleFinish = async () => {
-    setError('');
-    const completedExercises = exercises
-      .map(ex => ({ ...ex, sets: ex.sets.filter(s => s.completed) }))
-      .filter(ex => ex.sets.length > 0);
-
-    if (completedExercises.length === 0) {
-      setError('Complete at least one set to finish.');
-      return;
-    }
-
-    for (const ex of completedExercises) {
-      for (const s of ex.sets) {
-        if (ex.tracking === 'duration') {
-          if (!parseFloat(s.duration) || parseFloat(s.duration) <= 0) {
-            setError(`Enter duration for all completed sets in "${ex.name}".`);
-            return;
-          }
-        } else {
-          if (!parseInt(s.reps, 10) || parseInt(s.reps, 10) <= 0) {
-            setError(`Enter reps for all completed sets in "${ex.name}".`);
-            return;
-          }
-        }
-      }
-    }
-
-    setSaving(true);
-    try {
-      const payload: LoggedExercise[] = completedExercises.map(ex => ({
-        id: ex.id,
-        name: ex.name,
-        workoutType: ex.workoutTypeId,
-        sets: ex.sets.map(s => ({
-          reps: ex.tracking === 'duration' ? parseFloat(s.duration) : parseInt(s.reps, 10),
-          weight: ex.tracking === 'weighted' && s.weight.trim() !== '' ? parseFloat(s.weight) : null,
-          unit,
-        })) as WorkoutSet[],
-      }));
-      await logWorkout(payload);
-      navigation.goBack();
-    } catch (err: any) {
-      setError(err.message ?? 'Failed to save. Try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -301,7 +245,6 @@ export default function WorkoutLogScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
@@ -309,23 +252,8 @@ export default function WorkoutLogScreen() {
         <Text style={styles.heading} numberOfLines={1}>
           {workoutType?.title ?? 'Log Workout'}
         </Text>
-        <View style={styles.timerWrap}>
-          <Ionicons name="timer-outline" size={14} color={colors.textMuted} />
-          <Text style={styles.timerText}>{formatTime(elapsed)}</Text>
-        </View>
-        <TouchableOpacity
-          style={[styles.finishBtn, saving && { opacity: 0.6 }]}
-          onPress={handleFinish}
-          disabled={saving}
-        >
-          {saving
-            ? <ActivityIndicator size="small" color={colors.bg} />
-            : <Text style={styles.finishBtnText}>Finish</Text>
-          }
-        </TouchableOpacity>
       </View>
 
-      {/* Stats card */}
       <View style={styles.statsCard}>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>
@@ -389,7 +317,6 @@ export default function WorkoutLogScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Column headers */}
               {isDuration ? (
                 <View style={styles.colHeaders}>
                   <View style={styles.colSet} />
@@ -410,7 +337,6 @@ export default function WorkoutLogScreen() {
                 </View>
               )}
 
-              {/* Set rows */}
               {ex.sets.map((s, idx) => {
                 const done = s.completed;
                 return (
@@ -505,13 +431,6 @@ export default function WorkoutLogScreen() {
         <View style={{ height: 24 }} />
       </ScrollView>
 
-      {error !== '' && (
-        <View style={styles.errorBar}>
-          <Ionicons name="alert-circle-outline" size={14} color={colors.error} />
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
-
       {picker && (
         <Modal visible transparent animationType="slide" onRequestClose={() => setPicker(null)}>
           <View style={styles.pickerOverlay}>
@@ -533,8 +452,7 @@ export default function WorkoutLogScreen() {
                 showsVerticalScrollIndicator={false}
                 style={{ maxHeight: 300 }}
                 renderItem={({ item }) => {
-                  const itemStr = String(item);
-                  const isSelected = picker.current === itemStr ||
+                  const isSelected = picker.current === String(item) ||
                     (picker.field === 'weight' && parseFloat(picker.current) === item) ||
                     (picker.field !== 'weight' && parseInt(picker.current, 10) === item);
                   return (
@@ -568,18 +486,6 @@ const styles = StyleSheet.create({
   },
   backBtn: { padding: 4 },
   heading: { color: colors.text, fontSize: 17, fontWeight: '800', flex: 1 },
-  timerWrap: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 8,
-    paddingHorizontal: 8, paddingVertical: 5,
-  },
-  timerText: { color: colors.text, fontSize: 13, fontWeight: '700' },
-  finishBtn: {
-    backgroundColor: colors.primary, borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 7,
-    minWidth: 60, alignItems: 'center',
-  },
-  finishBtnText: { color: colors.bg, fontSize: 13, fontWeight: '800' },
 
   statsCard: {
     flexDirection: 'row', alignItems: 'center',
@@ -666,14 +572,6 @@ const styles = StyleSheet.create({
     borderRadius: 14, paddingVertical: 14, marginTop: 4,
   },
   addExerciseText: { color: colors.primary, fontSize: 15, fontWeight: '700' },
-
-  errorBar: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 16, paddingVertical: 10,
-    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.07)',
-    backgroundColor: `${colors.error}18`,
-  },
-  errorText: { color: colors.error, fontSize: 13, fontWeight: '600', flex: 1 },
 
   pickerOverlay: { flex: 1, justifyContent: 'flex-end' },
   pickerBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)' },
