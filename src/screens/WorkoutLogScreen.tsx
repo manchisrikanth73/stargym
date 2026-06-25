@@ -62,20 +62,27 @@ export default function WorkoutLogScreen() {
     getTodayLog()
       .then(log => {
         if (log && log.exercises.length > 0) {
-          const entries: ExerciseEntry[] = log.exercises.map(e => ({
-            id: e.id,
-            name: e.name,
-            muscle: ((e as any).muscle ?? 'Chest') as MuscleGroup,
-            tracking: resolveTracking(e.name),
-            workoutTypeId: e.workoutType,
-            sets: e.sets.map(s => ({
-              reps: String(s.reps),
-              weight: s.weight != null ? String(s.weight) : '',
-              duration: String(s.reps),
-              completed: true,
-            })),
-            previous: '',
-          }));
+          const relevant = workoutType
+            ? log.exercises.filter(e => e.workoutType === workoutType.id)
+            : log.exercises;
+          if (relevant.length === 0) return;
+          const entries: ExerciseEntry[] = relevant.map(e => {
+            const exData = EXERCISES.find(ex => ex.name === e.name);
+            return {
+              id: e.id,
+              name: e.name,
+              muscle: exData?.muscle ?? 'Cardio' as MuscleGroup,
+              tracking: exData?.tracking ?? 'weighted',
+              workoutTypeId: e.workoutType,
+              sets: e.sets.map(s => ({
+                reps: String(s.reps),
+                weight: s.weight != null ? String(s.weight) : '',
+                duration: String(s.reps),
+                completed: true,
+              })),
+              previous: '',
+            };
+          });
           setExercises(entries);
         }
       })
