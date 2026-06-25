@@ -11,6 +11,7 @@ import {
   logWorkout, getTodayLog, getPreviousExercise,
   LoggedExercise, WorkoutSet,
 } from '../services/workouts';
+import { calcExerciseCalories } from '../utils/calories';
 
 type WorkoutParam = { id: string; title: string; color: string };
 type SetEntry = { reps: string; weight: string; duration: string; completed: boolean };
@@ -234,6 +235,16 @@ export default function WorkoutLogScreen() {
       return a + (parseFloat(s.weight) || 0) * (parseInt(s.reps) || 0);
     }, 0);
   }, 0);
+  const totalCalories = Math.round(exercises.reduce((acc, ex) => {
+    const completedSets = ex.sets
+      .filter(s => s.completed)
+      .map(s => ({
+        reps: parseInt(s.reps) || 0,
+        weight: ex.tracking === 'weighted' && s.weight ? parseFloat(s.weight) : null,
+        duration: ex.tracking === 'duration' ? parseFloat(s.duration) || 0 : 0,
+      }));
+    return acc + calcExerciseCalories(ex.name, ex.tracking, completedSets);
+  }, 0));
 
   if (loading) {
     return (
@@ -259,12 +270,19 @@ export default function WorkoutLogScreen() {
           <Text style={styles.statValue}>
             {totalVolume > 0 ? `${totalVolume.toFixed(0)}` : '—'}
           </Text>
-          <Text style={styles.statLabel}>Volume ({unit})</Text>
+          <Text style={styles.statLabel}>Vol ({unit})</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
           <Text style={styles.statValue}>{totalSets}</Text>
-          <Text style={styles.statLabel}>Sets Done</Text>
+          <Text style={styles.statLabel}>Sets</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, { color: '#FF6B35' }]}>
+            {totalCalories > 0 ? totalCalories : '—'}
+          </Text>
+          <Text style={styles.statLabel}>KCAL</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
@@ -495,7 +513,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   statItem: { flex: 1, alignItems: 'center' },
-  statValue: { color: colors.text, fontSize: 20, fontWeight: '800' },
+  statValue: { color: colors.text, fontSize: 17, fontWeight: '800' },
   statLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '600', marginTop: 2, textTransform: 'uppercase' },
   statDivider: { width: 1, height: 32, backgroundColor: 'rgba(255,255,255,0.1)' },
 

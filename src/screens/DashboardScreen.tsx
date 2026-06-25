@@ -16,6 +16,9 @@ import dayjs from 'dayjs';
 import { auth } from '../services/firebase';
 import { isCheckedInToday, getMonthlyCount, subscribeRecentCheckins } from '../services/attendance';
 import { getUserProfile, getAllUsers, updateUserProfile } from '../services/users';
+import { getTodayLog } from '../services/workouts';
+import { EXERCISES } from '../data/exercises';
+import { calcExerciseCalories } from '../utils/calories';
 import { colors } from '../theme/colors';
 import { GYM_CHECKIN_CODE } from '../config';
 
@@ -48,6 +51,7 @@ export default function DashboardScreen() {
   const [activationEndDate, setActivationEndDate] = useState<string | null>(null);
   const [membershipType, setMembershipType] = useState<string | null>(null);
   const [isExpired, setIsExpired] = useState(false);
+  const [todayCalories, setTodayCalories] = useState(0);
 
   const user = auth.currentUser;
   const displayName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Athlete';
@@ -62,13 +66,29 @@ export default function DashboardScreen() {
   const loadStats = useCallback(async () => {
     const uid = user?.uid;
     const now = new Date();
-    const [ci, mc, profile] = await Promise.all([
+    const [ci, mc, profile, workoutLog] = await Promise.all([
       isCheckedInToday().catch(() => false),
       getMonthlyCount(now.getFullYear(), now.getMonth() + 1).catch(() => 0),
       uid ? getUserProfile(uid).catch(() => null) : Promise.resolve(null),
+      getTodayLog().catch(() => null),
     ]);
     setCheckedIn(ci);
     setMonthlyCount(mc);
+    if (workoutLog && workoutLog.exercises.length > 0) {
+      const kcal = Math.round(workoutLog.exercises.reduce((acc, ex) => {
+        const exDef = EXERCISES.find(e => e.name === ex.name);
+        const tracking = exDef?.tracking ?? 'weighted';
+        const sets = ex.sets.map(s => ({
+          reps: s.reps,
+          weight: s.weight,
+          duration: tracking === 'duration' ? s.reps : 0,
+        }));
+        return acc + calcExerciseCalories(ex.name, tracking, sets);
+      }, 0));
+      setTodayCalories(kcal);
+    } else {
+      setTodayCalories(0);
+    }
     const endDate = profile?.activationEndDate ?? null;
     const today = dayjs().format('YYYY-MM-DD');
     const expired = !!endDate && endDate < today;
@@ -206,10 +226,12 @@ export default function DashboardScreen() {
               <Text style={[styles.statValue, { color: colors.primary }]}>{monthlyCount}</Text>
               <Text style={styles.statLabel}>{monthName} Sessions</Text>
             </View>
-            <View style={[styles.statCard, { borderColor: `${colors.secondary}44` }]}>
-              <Ionicons name="flame-outline" size={20} color={colors.secondary} />
-              <Text style={[styles.statValue, { color: colors.secondary }]}>{checkedIn ? '🔥' : '—'}</Text>
-              <Text style={styles.statLabel}>Today</Text>
+            <View style={[styles.statCard, { borderColor: '#FF6B3544' }]}>
+              <Ionicons name="flame-outline" size={20} color="#FF6B35" />
+              <Text style={[styles.statValue, { color: '#FF6B35' }]}>
+                {todayCalories > 0 ? todayCalories : '—'}
+              </Text>
+              <Text style={styles.statLabel}>KCAL Today</Text>
             </View>
           </View>
 
