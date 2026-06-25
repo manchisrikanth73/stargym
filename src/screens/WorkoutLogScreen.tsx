@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator,
+  ActivityIndicator, Modal, FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -54,6 +54,9 @@ export default function WorkoutLogScreen() {
   const [error, setError] = useState('');
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef(Date.now());
+  const [picker, setPicker] = useState<{
+    exId: string; idx: number; field: 'weight' | 'reps' | 'duration'; options: number[]; current: string;
+  } | null>(null);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -168,6 +171,25 @@ export default function WorkoutLogScreen() {
   };
 
   const toggleUnit = () => setUnit(prev => prev === 'kg' ? 'lbs' : 'kg');
+
+  const KG_OPTS = [0, 2.5, 5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30, 32.5, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 130, 140, 150, 160, 180, 200];
+  const LBS_OPTS = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 110, 120, 130, 140, 150, 160, 175, 200, 225, 250, 275, 300];
+  const REPS_OPTS = Array.from({ length: 30 }, (_, i) => i + 1);
+  const MIN_OPTS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 18, 20, 25, 30, 35, 40, 45, 50, 55, 60, 75, 90, 105, 120];
+
+  const openPicker = (exId: string, idx: number, field: 'weight' | 'reps' | 'duration', current: string) => {
+    let options: number[];
+    if (field === 'weight') options = unit === 'kg' ? KG_OPTS : LBS_OPTS;
+    else if (field === 'reps') options = REPS_OPTS;
+    else options = MIN_OPTS;
+    setPicker({ exId, idx, field, options, current });
+  };
+
+  const commitPicker = (val: number) => {
+    if (!picker) return;
+    updateSet(picker.exId, picker.idx, picker.field, val === 0 ? '' : String(val));
+    setPicker(null);
+  };
 
   const totalSets = exercises.reduce(
     (acc, ex) => acc + ex.sets.filter(s => s.completed).length, 0
@@ -340,15 +362,15 @@ export default function WorkoutLogScreen() {
                     {isDuration ? (
                       <>
                         <Text style={[styles.setNum, done && { color: colors.success }]}>{idx + 1}</Text>
-                        <TextInput
-                          style={[styles.setInput, { flex: 1 }, done && styles.setInputDone]}
-                          value={s.duration}
-                          onChangeText={v => updateSet(ex.id, idx, 'duration', v.replace(/[^0-9.]/g, ''))}
-                          placeholder="—"
-                          placeholderTextColor={colors.textDim}
-                          keyboardType="decimal-pad"
-                          maxLength={5}
-                        />
+                        <TouchableOpacity
+                          style={[styles.setCell, { flex: 1 }, done && styles.setCellDone]}
+                          onPress={() => openPicker(ex.id, idx, 'duration', s.duration)}
+                        >
+                          <Text style={[styles.setCellText, !s.duration && { color: colors.textDim }]}>
+                            {s.duration ? `${s.duration} min` : '—'}
+                          </Text>
+                          <Ionicons name="chevron-down" size={10} color={colors.textDim} />
+                        </TouchableOpacity>
                       </>
                     ) : (
                       <>
@@ -357,25 +379,25 @@ export default function WorkoutLogScreen() {
                           {idx === 0 && ex.previous ? ex.previous : '—'}
                         </Text>
                         {isWeighted && (
-                          <TextInput
-                            style={[styles.setInput, styles.colInput, done && styles.setInputDone]}
-                            value={s.weight}
-                            onChangeText={v => updateSet(ex.id, idx, 'weight', v.replace(/[^0-9.]/g, ''))}
-                            placeholder="—"
-                            placeholderTextColor={colors.textDim}
-                            keyboardType="decimal-pad"
-                            maxLength={6}
-                          />
+                          <TouchableOpacity
+                            style={[styles.setCell, styles.colInput, done && styles.setCellDone]}
+                            onPress={() => openPicker(ex.id, idx, 'weight', s.weight)}
+                          >
+                            <Text style={[styles.setCellText, !s.weight && { color: colors.textDim }]}>
+                              {s.weight || '—'}
+                            </Text>
+                            <Ionicons name="chevron-down" size={10} color={colors.textDim} />
+                          </TouchableOpacity>
                         )}
-                        <TextInput
-                          style={[styles.setInput, styles.colInput, done && styles.setInputDone]}
-                          value={s.reps}
-                          onChangeText={v => updateSet(ex.id, idx, 'reps', v.replace(/[^0-9]/g, ''))}
-                          placeholder="—"
-                          placeholderTextColor={colors.textDim}
-                          keyboardType="numeric"
-                          maxLength={4}
-                        />
+                        <TouchableOpacity
+                          style={[styles.setCell, styles.colInput, done && styles.setCellDone]}
+                          onPress={() => openPicker(ex.id, idx, 'reps', s.reps)}
+                        >
+                          <Text style={[styles.setCellText, !s.reps && { color: colors.textDim }]}>
+                            {s.reps || '—'}
+                          </Text>
+                          <Ionicons name="chevron-down" size={10} color={colors.textDim} />
+                        </TouchableOpacity>
                       </>
                     )}
                     <TouchableOpacity
@@ -432,6 +454,49 @@ export default function WorkoutLogScreen() {
           <Ionicons name="alert-circle-outline" size={14} color={colors.error} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
+      )}
+
+      {picker && (
+        <Modal visible transparent animationType="slide" onRequestClose={() => setPicker(null)}>
+          <View style={styles.pickerOverlay}>
+            <TouchableOpacity style={styles.pickerBackdrop} onPress={() => setPicker(null)} activeOpacity={1} />
+            <View style={styles.pickerSheet}>
+              <View style={styles.pickerHeader}>
+                <Text style={styles.pickerTitle}>
+                  {picker.field === 'weight'
+                    ? `Weight (${unit})`
+                    : picker.field === 'reps' ? 'Reps' : 'Duration (min)'}
+                </Text>
+                <TouchableOpacity onPress={() => setPicker(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="close" size={20} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={picker.options}
+                keyExtractor={item => String(item)}
+                showsVerticalScrollIndicator={false}
+                style={{ maxHeight: 300 }}
+                renderItem={({ item }) => {
+                  const itemStr = String(item);
+                  const isSelected = picker.current === itemStr ||
+                    (picker.field === 'weight' && parseFloat(picker.current) === item) ||
+                    (picker.field !== 'weight' && parseInt(picker.current, 10) === item);
+                  return (
+                    <TouchableOpacity
+                      style={[styles.pickerItem, isSelected && styles.pickerItemSelected]}
+                      onPress={() => commitPicker(item)}
+                    >
+                      <Text style={[styles.pickerItemText, isSelected && styles.pickerItemTextSelected]}>
+                        {item === 0 ? '—' : picker.field === 'duration' ? `${item} min` : item}
+                      </Text>
+                      {isSelected && <Ionicons name="checkmark" size={16} color={colors.primary} />}
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            </View>
+          </View>
+        </Modal>
       )}
     </View>
   );
@@ -499,33 +564,33 @@ const styles = StyleSheet.create({
     color: colors.textDim, fontSize: 10, fontWeight: '800',
     textTransform: 'uppercase', letterSpacing: 0.5,
   },
-  colSet:   { width: 28, textAlign: 'center' },
-  colPrev:  { flex: 1.6 },
-  colInput: { flex: 1 },
-  colCheck: { width: 36 },
+  colSet:   { width: 22, textAlign: 'center' },
+  colPrev:  { flex: 1 },
+  colInput: { width: 60 },
+  colCheck: { width: 32 },
 
   setRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6,
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6,
     borderRadius: 8, paddingVertical: 4, paddingHorizontal: 2,
   },
   setRowDone: { backgroundColor: 'rgba(46, 204, 113, 0.08)' },
-  setNum: { color: colors.textDim, fontSize: 12, fontWeight: '700', width: 28, textAlign: 'center' },
-  prevText: { color: colors.textDim, fontSize: 12 },
-  setInput: {
+  setNum: { color: colors.textDim, fontSize: 12, fontWeight: '700', width: 22, textAlign: 'center' },
+  prevText: { color: colors.textDim, fontSize: 11 },
+  setCell: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
-    color: colors.text, fontSize: 14, fontWeight: '600',
-    paddingHorizontal: 6, paddingVertical: 7, textAlign: 'center',
+    paddingHorizontal: 4, paddingVertical: 7,
   },
-  setInputDone: {
+  setCellDone: {
     borderColor: 'rgba(46, 204, 113, 0.35)',
     backgroundColor: 'rgba(46, 204, 113, 0.06)',
   },
+  setCellText: { color: colors.text, fontSize: 13, fontWeight: '600' },
   checkBtn: {
-    width: 32, height: 32, borderRadius: 8,
+    width: 30, height: 30, borderRadius: 8,
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center', justifyContent: 'center',
-    marginLeft: 2,
   },
   checkBtnDone: { backgroundColor: colors.success, borderColor: colors.success },
 
@@ -553,4 +618,26 @@ const styles = StyleSheet.create({
     backgroundColor: `${colors.error}18`,
   },
   errorText: { color: colors.error, fontSize: 13, fontWeight: '600', flex: 1 },
+
+  pickerOverlay: { flex: 1, justifyContent: 'flex-end' },
+  pickerBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)' },
+  pickerSheet: {
+    backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    borderTopWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 16, paddingBottom: 32, paddingTop: 4,
+  },
+  pickerHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)',
+    marginBottom: 4,
+  },
+  pickerTitle: { color: colors.text, fontSize: 15, fontWeight: '700' },
+  pickerItem: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 13, paddingHorizontal: 4,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  pickerItemSelected: { backgroundColor: `${colors.primary}11`, borderRadius: 8 },
+  pickerItemText: { color: colors.textMuted, fontSize: 16 },
+  pickerItemTextSelected: { color: colors.primary, fontWeight: '700' },
 });
