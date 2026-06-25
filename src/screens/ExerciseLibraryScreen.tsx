@@ -5,7 +5,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors } from '../theme/colors';
-import { EXERCISES, MUSCLE_GROUPS, MUSCLE_COLORS, MuscleGroup, WorkoutSectionId } from '../data/exercises';
+import { EXERCISES, MUSCLE_GROUPS, MUSCLE_COLORS, MuscleGroup, WorkoutSectionId, ExerciseTracking } from '../data/exercises';
 
 export default function ExerciseLibraryScreen() {
   const navigation = useNavigation<any>();
@@ -48,7 +48,7 @@ export default function ExerciseLibraryScreen() {
   const handleAdd = () => {
     const exercises = Array.from(selected).map(name => {
       const ex = EXERCISES.find(e => e.name === name)!;
-      return { name: ex.name, muscle: ex.muscle };
+      return { name: ex.name, muscle: ex.muscle, tracking: ex.tracking };
     });
     navigation.navigate('WorkoutLog', { addedExercises: exercises });
   };

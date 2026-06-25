@@ -6,31 +6,36 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors } from '../theme/colors';
-import { MUSCLE_COLORS, MuscleGroup } from '../data/exercises';
+import { MUSCLE_COLORS, MuscleGroup, ExerciseTracking, EXERCISES } from '../data/exercises';
 import {
   logWorkout, getTodayLog, getPreviousExercise,
   LoggedExercise, WorkoutSet,
 } from '../services/workouts';
 
 type WorkoutParam = { id: string; title: string; color: string };
-type SetEntry = { reps: string; weight: string; completed: boolean };
+type SetEntry = { reps: string; weight: string; duration: string; completed: boolean };
 type ExerciseEntry = {
   id: string;
   name: string;
   muscle: MuscleGroup;
+  tracking: ExerciseTracking;
   workoutTypeId: string;
   sets: SetEntry[];
   previous: string;
 };
 
 function emptySet(): SetEntry {
-  return { reps: '', weight: '', completed: false };
+  return { reps: '', weight: '', duration: '', completed: false };
 }
 
 function formatTime(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function resolveTracking(name: string): ExerciseTracking {
+  return EXERCISES.find(e => e.name === name)?.tracking ?? 'weighted';
 }
 
 export default function WorkoutLogScreen() {
@@ -61,10 +66,12 @@ export default function WorkoutLogScreen() {
             id: e.id,
             name: e.name,
             muscle: ((e as any).muscle ?? 'Chest') as MuscleGroup,
+            tracking: resolveTracking(e.name),
             workoutTypeId: e.workoutType,
             sets: e.sets.map(s => ({
               reps: String(s.reps),
               weight: s.weight != null ? String(s.weight) : '',
+              duration: String(s.reps),
               completed: true,
             })),
             previous: '',
@@ -77,28 +84,28 @@ export default function WorkoutLogScreen() {
   }, []);
 
   useEffect(() => {
-    const added: { name: string; muscle: MuscleGroup }[] | undefined =
+    const added: { name: string; muscle: MuscleGroup; tracking: ExerciseTracking }[] | undefined =
       route.params?.addedExercises;
     if (!added || added.length === 0) return;
 
     navigation.setParams({ addedExercises: undefined });
 
-    const newEntries: ExerciseEntry[] = [];
     setExercises(prev => {
       const currentNames = new Set(prev.map(e => e.name));
       const fresh = added.filter(a => !currentNames.has(a.name)).map(a => ({
         id: `${Date.now()}_${a.name}`,
         name: a.name,
         muscle: a.muscle,
+        tracking: a.tracking,
         workoutTypeId: workoutType?.id ?? a.muscle.toLowerCase(),
         sets: [emptySet()],
         previous: '',
       }));
-      fresh.forEach(e => newEntries.push(e));
       return [...prev, ...fresh];
     });
 
-    added.forEach(async ({ name }) => {
+    added.forEach(async ({ name, tracking }) => {
+      if (tracking === 'duration') return;
       try {
         const prev = await getPreviousExercise(name);
         if (!prev) return;
@@ -127,7 +134,7 @@ export default function WorkoutLogScreen() {
     );
   };
 
-  const updateSet = (exId: string, idx: number, field: 'reps' | 'weight', value: string) => {
+  const updateSet = (exId: string, idx: number, field: keyof SetEntry, value: string) => {
     setExercises(prev =>
       prev.map(e => {
         if (e.id !== exId) return e;
@@ -154,11 +161,12 @@ export default function WorkoutLogScreen() {
   const totalSets = exercises.reduce(
     (acc, ex) => acc + ex.sets.filter(s => s.completed).length, 0
   );
-  const totalVolume = exercises.reduce(
-    (acc, ex) => acc + ex.sets.filter(s => s.completed).reduce((a, s) => {
+  const totalVolume = exercises.reduce((acc, ex) => {
+    if (ex.tracking !== 'weighted') return acc;
+    return acc + ex.sets.filter(s => s.completed).reduce((a, s) => {
       return a + (parseFloat(s.weight) || 0) * (parseInt(s.reps) || 0);
-    }, 0), 0
-  );
+    }, 0);
+  }, 0);
 
   const handleFinish = async () => {
     setError('');
@@ -170,11 +178,19 @@ export default function WorkoutLogScreen() {
       setError('Complete at least one set to finish.');
       return;
     }
+
     for (const ex of completedExercises) {
       for (const s of ex.sets) {
-        if (!parseInt(s.reps, 10) || parseInt(s.reps, 10) <= 0) {
-          setError(`Enter reps for all completed sets in "${ex.name}".`);
-          return;
+        if (ex.tracking === 'duration') {
+          if (!parseFloat(s.duration) || parseFloat(s.duration) <= 0) {
+            setError(`Enter duration for all completed sets in "${ex.name}".`);
+            return;
+          }
+        } else {
+          if (!parseInt(s.reps, 10) || parseInt(s.reps, 10) <= 0) {
+            setError(`Enter reps for all completed sets in "${ex.name}".`);
+            return;
+          }
         }
       }
     }
@@ -186,8 +202,8 @@ export default function WorkoutLogScreen() {
         name: ex.name,
         workoutType: ex.workoutTypeId,
         sets: ex.sets.map(s => ({
-          reps: parseInt(s.reps, 10),
-          weight: s.weight.trim() !== '' ? parseFloat(s.weight) : null,
+          reps: ex.tracking === 'duration' ? parseFloat(s.duration) : parseInt(s.reps, 10),
+          weight: ex.tracking === 'weighted' && s.weight.trim() !== '' ? parseFloat(s.weight) : null,
           unit,
         })) as WorkoutSet[],
       }));
@@ -269,6 +285,9 @@ export default function WorkoutLogScreen() {
 
         {exercises.map(ex => {
           const muscleColor = MUSCLE_COLORS[ex.muscle] ?? colors.primary;
+          const isWeighted  = ex.tracking === 'weighted';
+          const isDuration  = ex.tracking === 'duration';
+
           return (
             <View key={ex.id} style={styles.exCard}>
               <View style={styles.exHeader}>
@@ -281,45 +300,73 @@ export default function WorkoutLogScreen() {
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.colHeaders}>
-                <Text style={[styles.colLabel, styles.colSet]}>SET</Text>
-                <Text style={[styles.colLabel, styles.colPrev]}>PREVIOUS</Text>
-                <Text style={[styles.colLabel, styles.colInput, { textAlign: 'center' }]}>
-                  {unit.toUpperCase()}
-                </Text>
-                <Text style={[styles.colLabel, styles.colInput, { textAlign: 'center' }]}>REPS</Text>
-                <View style={styles.colCheck} />
-              </View>
+              {/* Column headers */}
+              {isDuration ? (
+                <View style={styles.colHeaders}>
+                  <View style={styles.colSet} />
+                  <Text style={[styles.colLabel, { flex: 1, textAlign: 'center' }]}>MIN</Text>
+                  <View style={styles.colCheck} />
+                </View>
+              ) : (
+                <View style={styles.colHeaders}>
+                  <Text style={[styles.colLabel, styles.colSet]}>SET</Text>
+                  <Text style={[styles.colLabel, styles.colPrev]}>PREVIOUS</Text>
+                  {isWeighted && (
+                    <Text style={[styles.colLabel, styles.colInput, { textAlign: 'center' }]}>
+                      {unit.toUpperCase()}
+                    </Text>
+                  )}
+                  <Text style={[styles.colLabel, styles.colInput, { textAlign: 'center' }]}>REPS</Text>
+                  <View style={styles.colCheck} />
+                </View>
+              )}
 
+              {/* Set rows */}
               {ex.sets.map((s, idx) => {
                 const done = s.completed;
                 return (
-                  <View
-                    key={idx}
-                    style={[styles.setRow, done && styles.setRowDone]}
-                  >
-                    <Text style={[styles.setNum, done && { color: colors.success }]}>{idx + 1}</Text>
-                    <Text style={[styles.prevText, styles.colPrev]} numberOfLines={1}>
-                      {idx === 0 && ex.previous ? ex.previous : '—'}
-                    </Text>
-                    <TextInput
-                      style={[styles.setInput, styles.colInput, done && styles.setInputDone]}
-                      value={s.weight}
-                      onChangeText={v => updateSet(ex.id, idx, 'weight', v.replace(/[^0-9.]/g, ''))}
-                      placeholder="—"
-                      placeholderTextColor={colors.textDim}
-                      keyboardType="decimal-pad"
-                      maxLength={6}
-                    />
-                    <TextInput
-                      style={[styles.setInput, styles.colInput, done && styles.setInputDone]}
-                      value={s.reps}
-                      onChangeText={v => updateSet(ex.id, idx, 'reps', v.replace(/[^0-9]/g, ''))}
-                      placeholder="—"
-                      placeholderTextColor={colors.textDim}
-                      keyboardType="numeric"
-                      maxLength={4}
-                    />
+                  <View key={idx} style={[styles.setRow, done && styles.setRowDone]}>
+                    {isDuration ? (
+                      <>
+                        <Text style={[styles.setNum, done && { color: colors.success }]}>{idx + 1}</Text>
+                        <TextInput
+                          style={[styles.setInput, { flex: 1 }, done && styles.setInputDone]}
+                          value={s.duration}
+                          onChangeText={v => updateSet(ex.id, idx, 'duration', v.replace(/[^0-9.]/g, ''))}
+                          placeholder="—"
+                          placeholderTextColor={colors.textDim}
+                          keyboardType="decimal-pad"
+                          maxLength={5}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <Text style={[styles.setNum, done && { color: colors.success }]}>{idx + 1}</Text>
+                        <Text style={[styles.prevText, styles.colPrev]} numberOfLines={1}>
+                          {idx === 0 && ex.previous ? ex.previous : '—'}
+                        </Text>
+                        {isWeighted && (
+                          <TextInput
+                            style={[styles.setInput, styles.colInput, done && styles.setInputDone]}
+                            value={s.weight}
+                            onChangeText={v => updateSet(ex.id, idx, 'weight', v.replace(/[^0-9.]/g, ''))}
+                            placeholder="—"
+                            placeholderTextColor={colors.textDim}
+                            keyboardType="decimal-pad"
+                            maxLength={6}
+                          />
+                        )}
+                        <TextInput
+                          style={[styles.setInput, styles.colInput, done && styles.setInputDone]}
+                          value={s.reps}
+                          onChangeText={v => updateSet(ex.id, idx, 'reps', v.replace(/[^0-9]/g, ''))}
+                          placeholder="—"
+                          placeholderTextColor={colors.textDim}
+                          keyboardType="numeric"
+                          maxLength={4}
+                        />
+                      </>
+                    )}
                     <TouchableOpacity
                       style={[styles.checkBtn, done && styles.checkBtnDone]}
                       onPress={() => toggleComplete(ex.id, idx)}
@@ -393,7 +440,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 8,
     paddingHorizontal: 8, paddingVertical: 5,
   },
-  timerText: { color: colors.text, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  timerText: { color: colors.text, fontSize: 13, fontWeight: '700' },
   finishBtn: {
     backgroundColor: colors.primary, borderRadius: 10,
     paddingHorizontal: 14, paddingVertical: 7,
@@ -415,9 +462,7 @@ const styles = StyleSheet.create({
 
   scroll: { paddingHorizontal: 16 },
 
-  emptyState: {
-    alignItems: 'center', paddingVertical: 48, gap: 10,
-  },
+  emptyState: { alignItems: 'center', paddingVertical: 48, gap: 10 },
   emptyTitle: { color: colors.textMuted, fontSize: 16, fontWeight: '700' },
   emptySubtext: { color: colors.textDim, fontSize: 13 },
 
@@ -426,9 +471,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
     padding: 14, marginBottom: 12,
   },
-  exHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12,
-  },
+  exHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   musclePill: {
     borderRadius: 6, borderWidth: 1,
     paddingHorizontal: 7, paddingVertical: 2,
@@ -444,8 +487,8 @@ const styles = StyleSheet.create({
     color: colors.textDim, fontSize: 10, fontWeight: '800',
     textTransform: 'uppercase', letterSpacing: 0.5,
   },
-  colSet: { width: 28, textAlign: 'center' },
-  colPrev: { flex: 1.6 },
+  colSet:   { width: 28, textAlign: 'center' },
+  colPrev:  { flex: 1.6 },
   colInput: { flex: 1 },
   colCheck: { width: 36 },
 
@@ -453,16 +496,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6,
     borderRadius: 8, paddingVertical: 4, paddingHorizontal: 2,
   },
-  setRowDone: {
-    backgroundColor: 'rgba(46, 204, 113, 0.08)',
-  },
-  setNum: {
-    color: colors.textDim, fontSize: 12, fontWeight: '700',
-    width: 28, textAlign: 'center',
-  },
-  prevText: {
-    color: colors.textDim, fontSize: 12,
-  },
+  setRowDone: { backgroundColor: 'rgba(46, 204, 113, 0.08)' },
+  setNum: { color: colors.textDim, fontSize: 12, fontWeight: '700', width: 28, textAlign: 'center' },
+  prevText: { color: colors.textDim, fontSize: 12 },
   setInput: {
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
@@ -479,13 +515,9 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     marginLeft: 2,
   },
-  checkBtnDone: {
-    backgroundColor: colors.success, borderColor: colors.success,
-  },
+  checkBtnDone: { backgroundColor: colors.success, borderColor: colors.success },
 
-  exFooter: {
-    flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 8,
-  },
+  exFooter: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 8 },
   addSetBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 10, paddingVertical: 6,
