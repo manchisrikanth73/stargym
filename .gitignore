@@ -44,6 +44,11 @@ dist/
 cert.pem
 key.pem
 
+# Firebase Admin service account keys — NEVER commit
+serviceAccountKey*.json
+*-firebase-*.json
+.env
+
 # Claude Code personal overrides
 CLAUDE.local.md
 .claude/settings.local.json
