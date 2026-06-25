@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, Modal, FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors } from '../theme/colors';
 import { MUSCLE_COLORS, MuscleGroup, ExerciseTracking, EXERCISES } from '../data/exercises';
 import {
@@ -107,7 +107,8 @@ export default function WorkoutLogScreen() {
       .finally(() => setLoading(false));
   }, []);
 
-  useFocusEffect(useCallback(() => {
+  useEffect(() => {
+    if (loading) return;
     const added = route.params?.addedExercises as
       { name: string; muscle: MuscleGroup; tracking: ExerciseTracking }[] | undefined;
     if (!added || added.length === 0) return;
@@ -140,7 +141,7 @@ export default function WorkoutLogScreen() {
         );
       } catch {}
     });
-  }, [route.params?.addedExercises, workoutType]));
+  }, [loading, route.params?.addedExercises]);
 
   const addSet = (exId: string) => {
     setExercises(prev =>
