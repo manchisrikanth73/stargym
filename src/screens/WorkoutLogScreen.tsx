@@ -41,11 +41,15 @@ function resolveTracking(name: string): ExerciseTracking {
 export default function WorkoutLogScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  // Captured in state at mount — immune to route.params being replaced by
-  // subsequent navigation.navigate() calls from ExerciseLibraryScreen.
-  const [workoutType] = useState<WorkoutParam | undefined>(
+  const [workoutType, setWorkoutType] = useState<WorkoutParam | undefined>(
     () => route.params?.workoutType as WorkoutParam | undefined
   );
+  // Keep workoutType in sync whenever route.params provides it
+  // (covers web timing edge cases and screen-reuse scenarios)
+  const routeWT = route.params?.workoutType as WorkoutParam | undefined;
+  useEffect(() => {
+    if (routeWT?.id) setWorkoutType(routeWT);
+  }, [routeWT?.id]);
 
   const [exercises, setExercises] = useState<ExerciseEntry[]>([]);
   const [unit, setUnit] = useState<'kg' | 'lbs'>('kg');
@@ -68,30 +72,36 @@ export default function WorkoutLogScreen() {
   useEffect(() => {
     getTodayLog()
       .then(log => {
-        if (log && log.exercises.length > 0) {
-          const relevant = workoutType
-            ? log.exercises.filter(e => e.workoutType === workoutType.id)
-            : log.exercises;
-          if (relevant.length === 0) return;
-          const entries: ExerciseEntry[] = relevant.map(e => {
-            const exData = EXERCISES.find(ex => ex.name === e.name);
-            return {
-              id: e.id,
-              name: e.name,
-              muscle: exData?.muscle ?? 'Cardio' as MuscleGroup,
-              tracking: exData?.tracking ?? 'weighted',
-              workoutTypeId: e.workoutType,
-              sets: e.sets.map(s => ({
-                reps: String(s.reps),
-                weight: s.weight != null ? String(s.weight) : '',
-                duration: String(s.reps),
-                completed: true,
-              })),
-              previous: '',
-            };
-          });
-          setExercises(entries);
-        }
+        if (!log || log.exercises.length === 0) return;
+        const wtId = (route.params?.workoutType as WorkoutParam | undefined)?.id;
+        const relevant = wtId
+          ? log.exercises.filter(e => {
+              if (e.workoutType === wtId) return true;
+              // Also match by exercise section — catches entries saved when
+              // workoutType was undefined (stored with muscle name instead of section id)
+              const exDef = EXERCISES.find(ex => ex.name === e.name);
+              return exDef?.sections.includes(wtId as any) ?? false;
+            })
+          : log.exercises;
+        if (relevant.length === 0) return;
+        const entries: ExerciseEntry[] = relevant.map(e => {
+          const exData = EXERCISES.find(ex => ex.name === e.name);
+          return {
+            id: e.id,
+            name: e.name,
+            muscle: exData?.muscle ?? 'Cardio' as MuscleGroup,
+            tracking: exData?.tracking ?? 'weighted',
+            workoutTypeId: wtId ?? e.workoutType,
+            sets: e.sets.map(s => ({
+              reps: String(s.reps),
+              weight: s.weight != null ? String(s.weight) : '',
+              duration: String(s.reps),
+              completed: true,
+            })),
+            previous: '',
+          };
+        });
+        setExercises(entries);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
