@@ -416,6 +416,7 @@ export default function WorkoutLogScreen() {
           onPress={() => navigation.navigate('ExerciseLibrary', {
             workoutTypeId: workoutType?.id,
             workoutTitle: workoutType?.title,
+            workoutTypePassthrough: workoutType,
             alreadySelected: exercises.map(e => e.name),
           })}
         >

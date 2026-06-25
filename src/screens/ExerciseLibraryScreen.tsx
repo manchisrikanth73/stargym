@@ -13,6 +13,7 @@ export default function ExerciseLibraryScreen() {
   const alreadySelected: string[] = route.params?.alreadySelected ?? [];
   const workoutTypeId: WorkoutSectionId | undefined = route.params?.workoutTypeId;
   const workoutTitle: string | undefined = route.params?.workoutTitle;
+  const workoutTypePassthrough = route.params?.workoutTypePassthrough;
 
   const [search, setSearch] = useState('');
   const [filterMuscle, setFilterMuscle] = useState<MuscleGroup | 'All'>('All');
@@ -50,7 +51,10 @@ export default function ExerciseLibraryScreen() {
       const ex = EXERCISES.find(e => e.name === name)!;
       return { name: ex.name, muscle: ex.muscle, tracking: ex.tracking };
     });
-    navigation.navigate('WorkoutLog', { addedExercises: exercises });
+    navigation.navigate('WorkoutLog', {
+      addedExercises: exercises,
+      workoutType: workoutTypePassthrough,
+    });
   };
 
   const tabs: (MuscleGroup | 'All')[] = ['All', ...availableMuscles];
