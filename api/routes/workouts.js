@@ -19,10 +19,17 @@ router.post('/log', requireAuth, async (req, res) => {
     const ref = db().doc(`users/${uid}/workouts/${dateKey}`);
     const snap = await ref.get();
     const now = admin.FieldValue.serverTimestamp();
+
+    // Merge by workoutType: keep exercises from other sections, replace current section's.
+    const existing = snap.exists ? (snap.data().exercises || []) : [];
+    const payloadTypes = new Set(exercises.map(e => e.workoutType));
+    const preserved = existing.filter(e => !payloadTypes.has(e.workoutType));
+    const merged = [...preserved, ...exercises];
+
     await ref.set({
       uid,
       date: dateKey,
-      exercises,
+      exercises: merged,
       updatedAt: now,
       createdAt: snap.exists ? snap.data().createdAt : now,
     });

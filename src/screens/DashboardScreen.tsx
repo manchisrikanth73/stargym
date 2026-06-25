@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { Ionicons } from '@expo/vector-icons';
-import { DrawerActions, useNavigation } from '@react-navigation/native';
+import { DrawerActions, useNavigation, useFocusEffect } from '@react-navigation/native';
 import dayjs from 'dayjs';
 import { auth } from '../services/firebase';
 import { isCheckedInToday, getMonthlyCount, subscribeRecentCheckins } from '../services/attendance';
@@ -115,7 +115,7 @@ export default function DashboardScreen() {
     }
   }, [user?.uid]);
 
-  useEffect(() => { loadStats(); }, [loadStats]);
+  useFocusEffect(useCallback(() => { loadStats(); }, [loadStats]));
 
   useEffect(() => {
     if (!isAdmin) return;

@@ -84,16 +84,7 @@ const DEFAULT_MET: Record<ExerciseTracking, number> = {
   duration:  5.0,
 };
 
-// Estimated total time per completed set (work + rest) in minutes.
-// Heavy compounds rest ~2 min; isolation ~90 s; bodyweight ~90 s.
-const SET_MINUTES: Record<ExerciseTracking, number> = {
-  weighted:  2.5,
-  reps_only: 2.0,
-  duration:  0, // actual duration value used directly
-};
-
-// HIIT and plyometric movements have shorter inter-set rest.
-const HIIT_SET_MINUTES = 1.5;
+// HIIT and plyometric movements have faster rep cadence and shorter rest.
 const HIIT_EXERCISES = new Set([
   'Burpees', 'Mountain Climbers', 'Jump Squats', 'High Knees', 'Box Jumps',
   'Plyo Push-up', 'Bounding', 'Lateral Bounds', 'Broad Jump', 'Battle Ropes',
@@ -112,6 +103,11 @@ export type SetCalcInput = {
 /**
  * Returns estimated kcal burned for a single exercise given its completed sets.
  * Formula: MET × 70 kg × time_hours  (standard Compendium method).
+ *
+ * Time is estimated from actual rep counts so heavy/light sets are differentiated:
+ *   weighted   — reps × 3 s work + 120 s rest per set
+ *   reps_only  — reps × 3 s work + 90 s rest  (HIIT: 1.5 s/rep + 60 s rest)
+ *   duration   — actual minutes logged
  */
 export function calcExerciseCalories(
   name: string,
@@ -121,13 +117,23 @@ export function calcExerciseCalories(
   if (completedSets.length === 0) return 0;
 
   const met = EXERCISE_MET[name] ?? DEFAULT_MET[tracking];
-  let minutes: number;
+  let minutes = 0;
 
   if (tracking === 'duration') {
     minutes = completedSets.reduce((sum, s) => sum + (s.duration || 0), 0);
+  } else if (tracking === 'weighted') {
+    for (const s of completedSets) {
+      const reps = Math.max(1, s.reps || 1);
+      minutes += (reps * 3 + 120) / 60; // 3 s/rep + 2 min rest
+    }
   } else {
-    const perSet = HIIT_EXERCISES.has(name) ? HIIT_SET_MINUTES : SET_MINUTES[tracking];
-    minutes = completedSets.length * perSet;
+    const isHiit = HIIT_EXERCISES.has(name);
+    const secPerRep = isHiit ? 1.5 : 3.0;
+    const restSec   = isHiit ? 60  : 90;
+    for (const s of completedSets) {
+      const reps = Math.max(1, s.reps || 1);
+      minutes += (reps * secPerRep + restSec) / 60;
+    }
   }
 
   if (minutes <= 0) return 0;
