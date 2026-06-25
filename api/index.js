@@ -11,6 +11,7 @@ router.use('/auth',       require('./routes/auth'));
 router.use('/users',      require('./routes/users'));
 router.use('/attendance', require('./routes/attendance'));
 router.use('/settings',   require('./routes/settings'));
+router.use('/workouts',   require('./routes/workouts'));
 router.use('/sse',        require('./routes/sse'));
 router.use('/errors',     require('./routes/errors'));
 

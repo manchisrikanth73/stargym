@@ -7,6 +7,7 @@ import { useNavigation, DrawerActions, useFocusEffect } from '@react-navigation/
 import { auth } from '../services/firebase';
 import { getUserProfile } from '../services/users';
 import { subscribeWorkoutAccess } from '../services/gymSettings';
+import { getTodayLog } from '../services/workouts';
 import { colors } from '../theme/colors';
 
 const WORKOUTS = [
@@ -93,6 +94,7 @@ export default function WorkoutsScreen() {
   const [promoExpiry, setPromoExpiry] = useState<string | null>(null);
   const [planAccess, setPlanAccess] = useState<boolean>(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [loggedToday, setLoggedToday] = useState<Set<string>>(new Set());
 
   useFocusEffect(useCallback(() => {
     const uid = auth.currentUser?.uid;
@@ -105,6 +107,16 @@ export default function WorkoutsScreen() {
     } else {
       setLoadingProfile(false);
     }
+    getTodayLog()
+      .then(log => {
+        if (log) {
+          const types = new Set(log.exercises.map(e => e.workoutType));
+          setLoggedToday(types);
+        } else {
+          setLoggedToday(new Set());
+        }
+      })
+      .catch(() => setLoggedToday(new Set()));
     const unsubscribe = subscribeWorkoutAccess(wa => {
       setPlanAccess(!!wa[membershipType as keyof typeof wa]);
     });
@@ -172,6 +184,12 @@ export default function WorkoutsScreen() {
                   <View style={styles.titleRow}>
                     <Text style={styles.numberBadge}>{i + 1}</Text>
                     <Text style={styles.cardTitle}>{w.title}</Text>
+                    {loggedToday.has(w.id) && (
+                      <View style={styles.loggedBadge}>
+                        <View style={styles.loggedDot} />
+                        <Text style={styles.loggedBadgeText}>Logged</Text>
+                      </View>
+                    )}
                   </View>
                   <Text style={styles.cardDetail}>{w.detail}</Text>
                 </View>
@@ -198,6 +216,18 @@ export default function WorkoutsScreen() {
                     <Text style={[styles.goodForLabel, { color: w.color }]}>Good for</Text>
                     <Text style={styles.goodForText}>{w.goodFor}</Text>
                   </View>
+
+                  <TouchableOpacity
+                    style={[styles.logBtn, { borderColor: `${w.color}55` }]}
+                    onPress={() => navigation.navigate('WorkoutLog', {
+                      workoutType: { id: w.id, title: w.title, color: w.color, examples: w.examples },
+                    })}
+                  >
+                    <Ionicons name="add-circle-outline" size={16} color={w.color} />
+                    <Text style={[styles.logBtnText, { color: w.color }]}>
+                      {loggedToday.has(w.id) ? 'Update Log' : 'Log Workout'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               )}
             </TouchableOpacity>
@@ -294,6 +324,21 @@ const styles = StyleSheet.create({
   },
   goodForLabel: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 3 },
   goodForText: { color: colors.text, fontSize: 13, lineHeight: 18 },
+
+  loggedBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: `${colors.secondary}22`,
+    borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2,
+  },
+  loggedDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.secondary },
+  loggedBadgeText: { color: colors.secondary, fontSize: 10, fontWeight: '700' },
+  logBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    alignSelf: 'stretch', justifyContent: 'center',
+    borderWidth: 1, borderRadius: 10,
+    paddingVertical: 10, marginTop: 12,
+  },
+  logBtnText: { fontSize: 13, fontWeight: '700' },
 
   tipBox: {
     backgroundColor: `${colors.secondary}18`,
