@@ -4,6 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { getAttendanceDates, getMonthlyCount } from '../services/attendance';
+import { getWorkoutHistory } from '../services/workouts';
+import { getUserProfile } from '../services/users';
+import { auth } from '../services/firebase';
+import { EXERCISES } from '../data/exercises';
+import { calcExerciseCalories } from '../utils/calories';
 import { colors } from '../theme/colors';
 import dayjs from 'dayjs';
 
@@ -16,6 +21,7 @@ export default function ProgressScreen() {
   const [thisMonth, setThisMonth] = useState(0);
   const [monthly, setMonthly] = useState<{ label: string; count: number }[]>([]);
   const [thisWeekDates, setThisWeekDates] = useState<string[]>([]);
+  const [weekCalories, setWeekCalories] = useState<{ date: string; kcal: number }[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -26,14 +32,34 @@ export default function ProgressScreen() {
           const year = now.getFullYear();
           const month = now.getMonth() + 1;
 
-          const [current, allDates] = await Promise.all([
+          const uid = auth.currentUser?.uid;
+          const [current, allDates, history, profile] = await Promise.all([
             getMonthlyCount(year, month),
             getAttendanceDates(),
+            getWorkoutHistory(14),
+            uid ? getUserProfile(uid).catch(() => null) : Promise.resolve(null),
           ]);
           setThisMonth(current);
+          const bodyWeight = profile?.weightKg ?? 70;
           const weekStart = dayjs().startOf('week').format('YYYY-MM-DD');
           const today = dayjs().format('YYYY-MM-DD');
           setThisWeekDates(allDates.filter(d => d >= weekStart && d <= today).reverse());
+
+          const weekLogs = history.filter(w => w.date >= weekStart && w.date <= today);
+          const calByDay = weekLogs.map(w => ({
+            date: w.date,
+            kcal: Math.round(w.exercises.reduce((acc, ex) => {
+              const exDef = EXERCISES.find(e => e.name === ex.name);
+              const tracking = exDef?.tracking ?? 'weighted';
+              const sets = ex.sets.map(s => ({
+                reps: s.reps,
+                weight: s.weight,
+                duration: tracking === 'duration' ? s.reps : 0,
+              }));
+              return acc + calcExerciseCalories(ex.name, tracking, sets, bodyWeight);
+            }, 0)),
+          })).filter(d => d.kcal > 0).sort((a, b) => b.date.localeCompare(a.date));
+          setWeekCalories(calByDay);
 
           const past: { label: string; count: number }[] = [];
           for (let i = 5; i >= 0; i--) {
@@ -112,6 +138,31 @@ export default function ProgressScreen() {
               ))
             )}
           </View>
+
+          {/* This week calories */}
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>This Week Calories</Text>
+            {weekCalories.length === 0 ? (
+              <Text style={styles.empty}>No workouts logged this week</Text>
+            ) : (
+              <>
+                <View style={styles.weekKcalTotal}>
+                  <Text style={styles.weekKcalValue}>
+                    {weekCalories.reduce((s, d) => s + d.kcal, 0).toLocaleString()}
+                  </Text>
+                  <Text style={styles.weekKcalUnit}>kcal total</Text>
+                </View>
+                {weekCalories.map((d, i) => (
+                  <View key={d.date} style={[styles.dateRow, i < weekCalories.length - 1 && styles.dateRowBorder]}>
+                    <Ionicons name="flame" size={16} color="#FF6B35" />
+                    <Text style={styles.dateText}>{dayjs(d.date).format('DD MMM YYYY')}</Text>
+                    <Text style={styles.dateDow}>{dayjs(d.date).format('ddd')}</Text>
+                    <Text style={styles.kcalBadge}>{d.kcal} kcal</Text>
+                  </View>
+                ))}
+              </>
+            )}
+          </View>
         </>
       )}
     </ScrollView>
@@ -148,4 +199,8 @@ const styles = StyleSheet.create({
   dateText: { flex: 1, color: colors.text, fontSize: 14 },
   dateDow: { color: colors.textMuted, fontSize: 12 },
   empty: { color: colors.textDim, fontSize: 13, textAlign: 'center', paddingVertical: 16 },
+  weekKcalTotal: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginBottom: 12 },
+  weekKcalValue: { color: '#FF6B35', fontSize: 36, fontWeight: '900' },
+  weekKcalUnit: { color: colors.textMuted, fontSize: 13 },
+  kcalBadge: { color: '#FF6B35', fontSize: 13, fontWeight: '700' },
 });
