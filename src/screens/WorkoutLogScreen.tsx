@@ -218,7 +218,7 @@ export default function WorkoutLogScreen() {
                   style={[styles.setInput, { flex: 1 }]}
                   value={s.reps}
                   onChangeText={v => updateSet(ex.id, idx, 'reps', v.replace(/[^0-9]/g, ''))}
-                  placeholder="0"
+                  placeholder=""
                   placeholderTextColor={colors.textDim}
                   keyboardType="numeric"
                   maxLength={4}
@@ -245,10 +245,13 @@ export default function WorkoutLogScreen() {
           </View>
         ))}
 
+        <View style={{ height: 16 }} />
+      </ScrollView>
+
+      <View style={styles.footer}>
         {error !== '' && (
           <Text style={styles.errorText}>{error}</Text>
         )}
-
         <TouchableOpacity
           style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
           onPress={handleSave}
@@ -259,9 +262,7 @@ export default function WorkoutLogScreen() {
             : <Text style={styles.saveBtnText}>Save Workout</Text>
           }
         </TouchableOpacity>
-
-        <View style={{ height: 40 }} />
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -330,11 +331,16 @@ const styles = StyleSheet.create({
   },
   addSetText: { color: colors.primary, fontSize: 12, fontWeight: '600' },
 
-  errorText: { color: colors.error, fontSize: 13, textAlign: 'center', marginBottom: 12 },
+  footer: {
+    paddingHorizontal: 16, paddingBottom: 32, paddingTop: 12,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: colors.bg,
+  },
+  errorText: { color: colors.error, fontSize: 13, textAlign: 'center', marginBottom: 8 },
 
   saveBtn: {
     backgroundColor: colors.primary, borderRadius: 14,
-    paddingVertical: 16, alignItems: 'center', marginTop: 8,
+    paddingVertical: 16, alignItems: 'center',
   },
   saveBtnDisabled: { opacity: 0.6 },
   saveBtnText: { color: colors.bg, fontSize: 16, fontWeight: '800' },
