@@ -63,9 +63,9 @@ export default function DashboardScreen() {
     const uid = user?.uid;
     const now = new Date();
     const [ci, mc, profile] = await Promise.all([
-      isCheckedInToday(),
-      getMonthlyCount(now.getFullYear(), now.getMonth() + 1),
-      uid ? getUserProfile(uid) : Promise.resolve(null),
+      isCheckedInToday().catch(() => false),
+      getMonthlyCount(now.getFullYear(), now.getMonth() + 1).catch(() => 0),
+      uid ? getUserProfile(uid).catch(() => null) : Promise.resolve(null),
     ]);
     setCheckedIn(ci);
     setMonthlyCount(mc);

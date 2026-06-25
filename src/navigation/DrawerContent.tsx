@@ -30,9 +30,9 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
 
   useEffect(() => {
     if (user?.uid) {
-      getUserProfile(user.uid).then(p => {
-        setIsAdmin(p?.role === 'admin');
-      });
+      getUserProfile(user.uid)
+        .then(p => setIsAdmin(p?.role === 'admin'))
+        .catch(() => setIsAdmin(false));
     }
   }, [user?.uid]);
 
