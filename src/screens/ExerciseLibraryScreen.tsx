@@ -14,6 +14,8 @@ export default function ExerciseLibraryScreen() {
   const workoutTypeId: WorkoutSectionId | undefined = route.params?.workoutTypeId;
   const workoutTitle: string | undefined = route.params?.workoutTitle;
   const workoutTypePassthrough = route.params?.workoutTypePassthrough;
+  const swapMode: boolean = route.params?.swapMode ?? false;
+  const swapTargetId: string | undefined = route.params?.swapTargetId;
 
   const [search, setSearch] = useState('');
   const [filterMuscle, setFilterMuscle] = useState<MuscleGroup | 'All'>('All');
@@ -40,8 +42,12 @@ export default function ExerciseLibraryScreen() {
   const toggleSelect = (name: string) => {
     setSelected(prev => {
       const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        if (swapMode) next.clear();
+        next.add(name);
+      }
       return next;
     });
   };
@@ -51,10 +57,18 @@ export default function ExerciseLibraryScreen() {
       const ex = EXERCISES.find(e => e.name === name)!;
       return { name: ex.name, muscle: ex.muscle, tracking: ex.tracking };
     });
-    navigation.navigate('WorkoutLog', {
-      addedExercises: exercises,
-      workoutType: workoutTypePassthrough,
-    });
+    if (swapMode) {
+      navigation.navigate('WorkoutLog', {
+        swappedExercise: exercises[0],
+        swapTargetId,
+        workoutType: workoutTypePassthrough,
+      });
+    } else {
+      navigation.navigate('WorkoutLog', {
+        addedExercises: exercises,
+        workoutType: workoutTypePassthrough,
+      });
+    }
   };
 
   const tabs: (MuscleGroup | 'All')[] = ['All', ...availableMuscles];
@@ -147,7 +161,7 @@ export default function ExerciseLibraryScreen() {
         <View style={styles.footer}>
           <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
             <Text style={styles.addBtnText}>
-              Add {selected.size} Exercise{selected.size > 1 ? 's' : ''}
+              {swapMode ? 'Swap Exercise' : `Add ${selected.size} Exercise${selected.size > 1 ? 's' : ''}`}
             </Text>
           </TouchableOpacity>
         </View>

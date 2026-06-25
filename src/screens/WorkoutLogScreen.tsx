@@ -143,6 +143,37 @@ export default function WorkoutLogScreen() {
     });
   }, [loading, route.params?.addedExercises]);
 
+  useEffect(() => {
+    if (loading) return;
+    const swapped = route.params?.swappedExercise as
+      { name: string; muscle: MuscleGroup; tracking: ExerciseTracking } | undefined;
+    const targetId = route.params?.swapTargetId as string | undefined;
+    if (!swapped || !targetId) return;
+
+    navigation.setParams({ swappedExercise: undefined, swapTargetId: undefined });
+
+    setExercises(prev =>
+      prev.map(e => e.id !== targetId ? e : {
+        ...e,
+        name: swapped.name,
+        muscle: swapped.muscle,
+        tracking: swapped.tracking,
+        previous: '',
+      })
+    );
+
+    if (swapped.tracking !== 'duration') {
+      getPreviousExercise(swapped.name).then(prev => {
+        if (!prev) return;
+        const { weight, reps, unit: u } = prev.bestSet;
+        const label = weight != null ? `${weight} ${u} × ${reps}` : `${reps} reps`;
+        setExercises(curr =>
+          curr.map(e => e.name === swapped.name ? { ...e, previous: label } : e)
+        );
+      }).catch(() => {});
+    }
+  }, [loading, route.params?.swappedExercise]);
+
   const addSet = (exId: string) => {
     setExercises(prev =>
       prev.map(e => e.id === exId ? { ...e, sets: [...e.sets, emptySet()] } : e)
@@ -339,6 +370,20 @@ export default function WorkoutLogScreen() {
                   <Text style={[styles.musclePillText, { color: muscleColor }]}>{ex.muscle}</Text>
                 </View>
                 <Text style={styles.exName}>{ex.name}</Text>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('ExerciseLibrary', {
+                    workoutTypeId: workoutType?.id,
+                    workoutTitle: workoutType?.title,
+                    workoutTypePassthrough: workoutType,
+                    alreadySelected: exercises.filter(e => e.id !== ex.id).map(e => e.name),
+                    swapMode: true,
+                    swapTargetId: ex.id,
+                  })}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={{ marginRight: 4 }}
+                >
+                  <Ionicons name="pencil-outline" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
                 <TouchableOpacity onPress={() => removeExercise(ex.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Ionicons name="close" size={18} color={colors.textDim} />
                 </TouchableOpacity>
