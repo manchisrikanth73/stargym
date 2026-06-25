@@ -41,7 +41,11 @@ function resolveTracking(name: string): ExerciseTracking {
 export default function WorkoutLogScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const workoutType: WorkoutParam | undefined = route.params?.workoutType;
+  // Captured in state at mount — immune to route.params being replaced by
+  // subsequent navigation.navigate() calls from ExerciseLibraryScreen.
+  const [workoutType] = useState<WorkoutParam | undefined>(
+    () => route.params?.workoutType as WorkoutParam | undefined
+  );
 
   const [exercises, setExercises] = useState<ExerciseEntry[]>([]);
   const [unit, setUnit] = useState<'kg' | 'lbs'>('kg');
