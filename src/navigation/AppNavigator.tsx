@@ -8,6 +8,7 @@ import AdminScreen from '../screens/AdminScreen';
 import AdminUserDetailScreen from '../screens/AdminUserDetailScreen';
 import WorkoutsScreen from '../screens/WorkoutsScreen';
 import WorkoutLogScreen from '../screens/WorkoutLogScreen';
+import ExerciseLibraryScreen from '../screens/ExerciseLibraryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import ProgressScreen from '../screens/ProgressScreen';
 import DrawerContent from './DrawerContent';
@@ -42,6 +43,7 @@ export default function AppNavigator() {
       <Stack.Screen name="AdminUserDetail" component={AdminUserDetailScreen} />
       <Stack.Screen name="Progress" component={ProgressScreen} />
       <Stack.Screen name="WorkoutLog" component={WorkoutLogScreen} />
+      <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} />
     </Stack.Navigator>
   );
 }

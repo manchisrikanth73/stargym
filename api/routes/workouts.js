@@ -69,4 +69,43 @@ router.get('/history', requireAuth, async (req, res) => {
   }
 });
 
+router.get('/previous-exercise', requireAuth, async (req, res) => {
+  try {
+    const { name } = req.query;
+    if (!name) return res.status(400).json({ error: 'name query param required' });
+
+    const snap = await db()
+      .collection(`users/${req.uid}/workouts`)
+      .orderBy('date', 'desc')
+      .limit(30)
+      .get();
+
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      const exercises = data.exercises || [];
+      const match = exercises.find(e => e.name === name);
+      if (match && match.sets && match.sets.length > 0) {
+        const bestSet = match.sets.reduce((best, s) => {
+          const score = (s.weight || 0) * s.reps;
+          const bestScore = (best.weight || 0) * best.reps;
+          return score > bestScore ? s : best;
+        }, match.sets[0]);
+        return res.json({
+          name: match.name,
+          date: data.date,
+          bestSet: {
+            reps: bestSet.reps,
+            weight: bestSet.weight ?? null,
+            unit: bestSet.unit ?? 'kg',
+          },
+        });
+      }
+    }
+
+    res.status(404).json({ error: 'No previous record' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
