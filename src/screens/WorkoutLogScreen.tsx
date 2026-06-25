@@ -357,6 +357,7 @@ export default function WorkoutLogScreen() {
           style={styles.addExerciseBtn}
           onPress={() => navigation.navigate('ExerciseLibrary', {
             workoutTypeId: workoutType?.id,
+            workoutTitle: workoutType?.title,
             alreadySelected: exercises.map(e => e.name),
           })}
         >

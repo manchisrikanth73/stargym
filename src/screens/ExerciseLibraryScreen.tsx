@@ -5,24 +5,36 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors } from '../theme/colors';
-import { EXERCISES, MUSCLE_GROUPS, MUSCLE_COLORS, MuscleGroup } from '../data/exercises';
+import { EXERCISES, MUSCLE_GROUPS, MUSCLE_COLORS, MuscleGroup, WorkoutSectionId } from '../data/exercises';
 
 export default function ExerciseLibraryScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const alreadySelected: string[] = route.params?.alreadySelected ?? [];
+  const workoutTypeId: WorkoutSectionId | undefined = route.params?.workoutTypeId;
+  const workoutTitle: string | undefined = route.params?.workoutTitle;
 
   const [search, setSearch] = useState('');
   const [filterMuscle, setFilterMuscle] = useState<MuscleGroup | 'All'>('All');
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
+  const sectionExercises = useMemo(
+    () => workoutTypeId ? EXERCISES.filter(e => e.sections.includes(workoutTypeId)) : EXERCISES,
+    [workoutTypeId]
+  );
+
+  const availableMuscles = useMemo(
+    () => MUSCLE_GROUPS.filter(m => sectionExercises.some(e => e.muscle === m)),
+    [sectionExercises]
+  );
+
   const filtered = useMemo(() => {
-    return EXERCISES.filter(e => {
+    return sectionExercises.filter(e => {
       const matchMuscle = filterMuscle === 'All' || e.muscle === filterMuscle;
       const matchSearch = search === '' || e.name.toLowerCase().includes(search.toLowerCase());
       return matchMuscle && matchSearch;
     });
-  }, [search, filterMuscle]);
+  }, [sectionExercises, search, filterMuscle]);
 
   const toggleSelect = (name: string) => {
     setSelected(prev => {
@@ -41,7 +53,7 @@ export default function ExerciseLibraryScreen() {
     navigation.navigate('WorkoutLog', { addedExercises: exercises });
   };
 
-  const tabs: (MuscleGroup | 'All')[] = ['All', ...MUSCLE_GROUPS];
+  const tabs: (MuscleGroup | 'All')[] = ['All', ...availableMuscles];
 
   return (
     <View style={styles.root}>
@@ -49,7 +61,7 @@ export default function ExerciseLibraryScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.heading}>Exercises</Text>
+        <Text style={styles.heading} numberOfLines={1}>{workoutTitle ?? 'Exercises'}</Text>
         <View style={{ width: 44 }} />
       </View>
 
