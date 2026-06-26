@@ -37,6 +37,7 @@ export default function SettingsScreen() {
   const [age, setAge]             = useState('');
   const [gender, setGender]       = useState('');
   const [weightKg, setWeightKg]   = useState('');
+  const [membershipType, setMembershipType] = useState('');
   const [original, setOriginal] = useState({ firstName: '', lastName: '', email: '', phone: '' });
 
   const [prices, setPrices] = useState<MembershipPrices>({ basic: 0, premium: 0, vip: 0 });
@@ -58,6 +59,7 @@ export default function SettingsScreen() {
       setAge(profile?.age != null ? String(profile.age) : '');
       setGender(profile?.gender ?? '');
       setWeightKg(profile?.weightKg != null ? String(profile.weightKg) : '');
+      setMembershipType(profile?.membershipType ?? '');
       setOriginal({ firstName: fn, lastName: ln, email: em, phone: ph });
       const admin = profile?.role === 'admin';
       setIsAdmin(admin);
@@ -122,47 +124,55 @@ export default function SettingsScreen() {
     }
   };
 
+  const badgeLabel = isAdmin
+    ? 'Admin'
+    : membershipType
+      ? `${membershipType.charAt(0).toUpperCase()}${membershipType.slice(1)} Member`
+      : 'Member';
 
   return (
     <View style={styles.root}>
-      <View style={styles.header}>
-        {isAdmin ? (
-          <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())}>
-            <Ionicons name="menu" size={28} color={colors.text} />
-          </TouchableOpacity>
+      {/* Hero Header */}
+      <View style={styles.hero}>
+        <View style={styles.heroNav}>
+          {isAdmin ? (
+            <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())} style={styles.heroNavBtn}>
+              <Ionicons name="menu" size={22} color={colors.text} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.heroNavBtn}>
+              <Ionicons name="chevron-back" size={22} color={colors.text} />
+            </TouchableOpacity>
+          )}
+          <Text style={styles.heroTitle}>My Account</Text>
+          <View style={styles.heroNavBtn} />
+        </View>
+
+        {loading ? (
+          <ActivityIndicator color={colors.primary} style={{ marginVertical: 32 }} />
         ) : (
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={28} color={colors.text} />
-          </TouchableOpacity>
-        )}
-        <Text style={styles.heading}>Settings</Text>
-        <TouchableOpacity style={styles.backDashBtn} onPress={() => navigation.navigate('Main', { screen: 'Dashboard' })}>
-          <Ionicons name="home-outline" size={14} color={colors.textMuted} />
-          <Text style={styles.backDashText}>Dashboard</Text>
-        </TouchableOpacity>
-      </View>
-
-      {loading ? (
-        <ActivityIndicator color={colors.primary} style={{ marginTop: 60 }} />
-      ) : (
-        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-
-          {/* Avatar */}
-          <View style={styles.avatarWrap}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {firstName ? firstName[0].toUpperCase() : '?'}
-              </Text>
+          <>
+            <View style={styles.avatarRing}>
+              <View style={styles.avatarCircle}>
+                <Text style={styles.avatarInitial}>
+                  {firstName ? firstName[0].toUpperCase() : '?'}
+                </Text>
+              </View>
             </View>
-            <Text style={styles.avatarName}>
+            <Text style={styles.heroName}>
               {[firstName, lastName].filter(Boolean).join(' ') || 'Your Name'}
             </Text>
-            <View style={[styles.roleBadge, isAdmin && styles.roleBadgeAdmin]}>
-              <Text style={[styles.roleText, isAdmin && styles.roleTextAdmin]}>
-                {isAdmin ? 'Admin' : 'Member'}
+            <View style={[styles.heroBadge, isAdmin && styles.heroBadgeAdmin]}>
+              <Text style={[styles.heroBadgeText, isAdmin && styles.heroBadgeTextAdmin]}>
+                {badgeLabel}
               </Text>
             </View>
-          </View>
+          </>
+        )}
+      </View>
+
+      {!loading && (
+        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
 
           {/* Profile section */}
           <Text style={styles.sectionLabel}>Profile</Text>
@@ -195,7 +205,6 @@ export default function SettingsScreen() {
             <>
               <Text style={[styles.sectionLabel, { marginTop: 28 }]}>Membership</Text>
               <View style={styles.card}>
-                {/* Column header row */}
                 <View style={[styles.gridRow, styles.gridHeaderRow]}>
                   <Text style={[styles.colHeader, styles.col1]}>Plan Type</Text>
                   <View style={[styles.col2, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
@@ -211,7 +220,6 @@ export default function SettingsScreen() {
                   <React.Fragment key={key}>
                     {i > 0 && <View style={styles.fieldDivider} />}
                     <View style={styles.gridRow}>
-                      {/* Col 1 – Plan Type */}
                       <View style={[styles.col1, { flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
                         <View style={[styles.membershipDot, { backgroundColor: `${color}22` }]}>
                           <Text style={[styles.membershipDotText, { color }]}>{label[0]}</Text>
@@ -219,7 +227,6 @@ export default function SettingsScreen() {
                         <Text style={styles.planName}>{label}</Text>
                       </View>
 
-                      {/* Col 2 – Plan Price + Edit */}
                       <View style={[styles.col2, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
                         {editingPrices ? (
                           <View style={styles.priceInputWrap}>
@@ -248,7 +255,6 @@ export default function SettingsScreen() {
                         )}
                       </View>
 
-                      {/* Col 3 – Workout toggle */}
                       <View style={[styles.col3, { alignItems: 'center' }]}>
                         <Switch
                           value={workoutAccess[key]}
@@ -261,7 +267,6 @@ export default function SettingsScreen() {
                     </View>
                   </React.Fragment>
                 ))}
-
               </View>
             </>
           )}
@@ -274,7 +279,7 @@ export default function SettingsScreen() {
             </View>
           )}
 
-          {/* Bottom action buttons */}
+          {/* Save / Cancel */}
           <View style={styles.bottomActions}>
             <TouchableOpacity
               style={styles.cancelBtn}
@@ -304,12 +309,16 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.logoutBtn} onPress={logOut}>
-            <Ionicons name="log-out-outline" size={20} color={colors.error} />
-            <Text style={styles.logoutBtnText}>Log Out</Text>
+          {/* Logout row */}
+          <TouchableOpacity style={styles.logoutRow} onPress={logOut}>
+            <View style={styles.logoutIconWrap}>
+              <Ionicons name="log-out-outline" size={18} color={colors.error} />
+            </View>
+            <Text style={styles.logoutText}>Log Out</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.error} style={{ opacity: 0.6 }} />
           </TouchableOpacity>
 
-          <View style={{ height: 32 }} />
+          <View style={{ height: 40 }} />
         </ScrollView>
       )}
     </View>
@@ -328,7 +337,7 @@ function Field({
   editable?: boolean;
 }) {
   return (
-    <View style={[styles.field, !editable && { opacity: 0.6 }]}>
+    <View style={[styles.field, !editable && { opacity: 0.5 }]}>
       <Text style={styles.fieldLabel}>{label}</Text>
       <TextInput
         style={styles.fieldInput}
@@ -347,33 +356,51 @@ function Field({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  header: {
+
+  /* Hero */
+  hero: {
+    backgroundColor: colors.surface,
+    paddingBottom: 28,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: `${colors.primary}22`,
+  },
+  heroNav: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingTop: 54, paddingBottom: 14,
+    width: '100%',
+    paddingHorizontal: 16, paddingTop: 54, paddingBottom: 20,
   },
-  heading: { color: colors.text, fontSize: 20, fontWeight: '800' },
-  backDashBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    borderWidth: 1, borderColor: colors.border, borderRadius: 8,
-    paddingHorizontal: 8, paddingVertical: 5,
+  heroNavBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  heroTitle: { color: colors.text, fontSize: 17, fontWeight: '700' },
+  avatarRing: {
+    width: 80, height: 80, borderRadius: 40,
+    borderWidth: 2, borderColor: colors.primary,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 12,
   },
-  backDashText: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
-  body: { padding: 20, paddingTop: 8 },
-  avatarWrap: { alignItems: 'center', paddingVertical: 24 },
-  avatar: {
+  avatarCircle: {
     width: 72, height: 72, borderRadius: 36,
-    backgroundColor: `${colors.primary}33`,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+    backgroundColor: `${colors.primary}22`,
+    alignItems: 'center', justifyContent: 'center',
   },
-  avatarText: { color: colors.primary, fontSize: 28, fontWeight: '800' },
-  avatarName: { color: colors.text, fontSize: 18, fontWeight: '700', marginBottom: 8 },
-  roleBadge: {
-    backgroundColor: `${colors.primary}22`, borderRadius: 6,
-    paddingHorizontal: 10, paddingVertical: 3,
+  avatarInitial: { color: colors.primary, fontSize: 28, fontWeight: '800' },
+  heroName: { color: colors.text, fontSize: 18, fontWeight: '700', marginBottom: 10 },
+  heroBadge: {
+    backgroundColor: `${colors.primary}20`,
+    borderRadius: 20, borderWidth: 1, borderColor: `${colors.primary}40`,
+    paddingHorizontal: 16, paddingVertical: 5,
   },
-  roleBadgeAdmin: { backgroundColor: `${colors.secondary}22` },
-  roleText: { color: colors.primary, fontSize: 11, fontWeight: '800' },
-  roleTextAdmin: { color: colors.secondary },
+  heroBadgeAdmin: {
+    backgroundColor: `${colors.secondary}20`,
+    borderColor: `${colors.secondary}40`,
+  },
+  heroBadgeText: { color: colors.primary, fontSize: 12, fontWeight: '800', letterSpacing: 0.3 },
+  heroBadgeTextAdmin: { color: colors.secondary },
+
+  /* Body */
+  body: { padding: 20, paddingTop: 24 },
   sectionLabel: {
     color: colors.textMuted, fontSize: 11, fontWeight: '700',
     textTransform: 'uppercase', letterSpacing: 0.8,
@@ -391,50 +418,9 @@ const styles = StyleSheet.create({
   fieldLabel: { color: colors.textMuted, fontSize: 13, fontWeight: '600', width: 80 },
   fieldInput: { flex: 1, color: colors.text, fontSize: 15 },
   fieldDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginLeft: 16 },
-  successBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: `${colors.success}18`,
-    borderWidth: 1, borderColor: `${colors.success}33`,
-    borderRadius: 10, padding: 12, marginBottom: 16,
-  },
-  successText: { color: colors.success, fontSize: 13 },
-  bottomActions: {
-    flexDirection: 'row', gap: 12, marginTop: 28,
-  },
-  cancelBtn: {
-    flex: 1, height: 52, borderRadius: 14,
-    borderWidth: 1, borderColor: colors.border,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  cancelBtnText: { color: colors.text, fontSize: 16, fontWeight: '600' },
-  saveBtn: {
-    flex: 2, height: 52, backgroundColor: colors.primary,
-    borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-  },
-  saveBtnDisabled: { opacity: 0.5 },
-  logoutBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, marginTop: 24, paddingVertical: 14,
-    borderRadius: 14, borderWidth: 1,
-    borderColor: `${colors.error}44`,
-    backgroundColor: `${colors.error}10`,
-  },
-  logoutBtnText: { color: colors.error, fontSize: 15, fontWeight: '700' },
-  saveBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
 
-  priceHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: 16, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
-  },
+  /* Membership grid */
   colHeader: { color: colors.textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  priceColLabel: { flexDirection: 'row', alignItems: 'center', gap: 8, width: 120 },
-  workoutColHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, width: 72, justifyContent: 'flex-end' },
-  priceHeaderLabel: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
-  editLink: { color: colors.primary, fontSize: 13, fontWeight: '700' },
-  priceActions: { flexDirection: 'row', gap: 16, alignItems: 'center' },
-  cancelLink: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
-  saveLink: { color: colors.secondary, fontSize: 13, fontWeight: '700' },
   gridRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingVertical: 12,
@@ -447,17 +433,13 @@ const styles = StyleSheet.create({
   col2: { flex: 2 },
   col3: { flex: 1 },
   planName: { color: colors.text, fontSize: 14, fontWeight: '600' },
-  priceRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 14, gap: 12,
-  },
   membershipDot: {
     width: 32, height: 32, borderRadius: 16,
     alignItems: 'center', justifyContent: 'center',
   },
   membershipDotText: { fontSize: 13, fontWeight: '800' },
-  priceLabel: { flex: 1, color: colors.text, fontSize: 15, fontWeight: '600' },
   priceValue: { color: colors.text, fontSize: 15, fontWeight: '700' },
+  editLink: { color: colors.primary, fontSize: 13, fontWeight: '700' },
   priceInputWrap: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.bg, borderRadius: 8,
@@ -467,18 +449,44 @@ const styles = StyleSheet.create({
   },
   currencySymbol: { color: colors.textMuted, fontSize: 14 },
   priceInput: { color: colors.text, fontSize: 14, width: 52 },
-  priceFooter: {
-    flexDirection: 'row', justifyContent: 'flex-end', gap: 20,
-    paddingHorizontal: 16, paddingVertical: 12,
-    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)',
-  },
-  accessHeader: {
+
+  /* Success */
+  successBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 16, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: `${colors.success}18`,
+    borderWidth: 1, borderColor: `${colors.success}33`,
+    borderRadius: 10, padding: 12, marginBottom: 16,
   },
-  accessRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 12, gap: 12,
+  successText: { color: colors.success, fontSize: 13 },
+
+  /* Actions */
+  bottomActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  cancelBtn: {
+    flex: 1, height: 52, borderRadius: 14,
+    borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
   },
+  cancelBtnText: { color: colors.text, fontSize: 16, fontWeight: '600' },
+  saveBtn: {
+    flex: 2, height: 52, backgroundColor: colors.primary,
+    borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+  },
+  saveBtnDisabled: { opacity: 0.5 },
+  saveBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
+
+  /* Logout row */
+  logoutRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: colors.surface,
+    borderRadius: 14, borderWidth: 1,
+    borderColor: `${colors.error}33`,
+    paddingHorizontal: 16, paddingVertical: 16,
+    marginTop: 24,
+  },
+  logoutIconWrap: {
+    width: 34, height: 34, borderRadius: 10,
+    backgroundColor: `${colors.error}18`,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  logoutText: { flex: 1, color: colors.error, fontSize: 15, fontWeight: '700' },
 });
