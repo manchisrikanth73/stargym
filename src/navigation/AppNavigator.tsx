@@ -14,6 +14,7 @@ import ProgressScreen from '../screens/ProgressScreen';
 import InboxScreen from '../screens/InboxScreen';
 import BillingScreen from '../screens/BillingScreen';
 import PromotionsScreen from '../screens/PromotionsScreen';
+import QRCodeScreen from '../screens/QRCodeScreen';
 import MemberInboxScreen from '../screens/MemberInboxScreen';
 import DrawerContent from './DrawerContent';
 
@@ -42,6 +43,7 @@ function DrawerNav() {
       <Drawer.Screen name="Inbox" component={InboxScreen} />
       <Drawer.Screen name="Billing" component={BillingScreen} />
       <Drawer.Screen name="Promotions" component={PromotionsScreen} />
+      <Drawer.Screen name="QRCode" component={QRCodeScreen} />
     </Drawer.Navigator>
   );
 }
