@@ -42,6 +42,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/react": "~18.3.12",
+    "jest": "^29.7.0",
     "playwright": "^1.61.0",
     "typescript": "~5.8.3"
   },
@@ -52,7 +53,14 @@
     "web": "expo start --web",
     "build:web": "EXPO_OFFLINE=1 npx expo export --platform web",
     "serve": "node server.js",
-    "gen-cert": "openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes -subj '/CN=192.168.1.110' 2>/dev/null && echo 'Cert generated! Now run: npm run serve'"
+    "gen-cert": "openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes -subj '/CN=192.168.1.110' 2>/dev/null && echo 'Cert generated! Now run: npm run serve'",
+    "test": "jest"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ]
   },
   "private": true
 }

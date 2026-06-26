@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { createUserProfile, updateUserProfile, disableMember, enableMember, UserProfile, MembershipType } from '../services/users';
+import { getMembershipPrices } from '../services/gymSettings';
+import {
+  SubscriptionStatus, PaymentEvent,
+  getPaymentStatus, getPaymentHistory,
+  createSubscription, cancelSubscription,
+  pauseSubscription, resumeSubscription,
+} from '../services/payments';
 import DateInput from '../components/DateInput';
 import { colors } from '../theme/colors';
 
@@ -57,6 +64,25 @@ export default function AdminUserDetailScreen() {
   });
   const [saving, setSaving] = useState(false);
   const [disabling, setDisabling] = useState(false);
+  const [memberPrice, setMemberPrice] = useState(0);
+  const [payStatus, setPayStatus] = useState<SubscriptionStatus | null>(null);
+  const [payHistory, setPayHistory] = useState<PaymentEvent[]>([]);
+  const [payLoading, setPayLoading] = useState(false);
+  const [payActionLoading, setPayActionLoading] = useState(false);
+
+  useEffect(() => {
+    if (!existing) return;
+    setPayLoading(true);
+    Promise.all([
+      getPaymentStatus(existing.uid),
+      getPaymentHistory(existing.uid),
+      getMembershipPrices(),
+    ]).then(([status, history, prices]) => {
+      setPayStatus(status);
+      setPayHistory(history);
+      setMemberPrice(prices[membershipType] ?? 0);
+    }).catch(() => {}).finally(() => setPayLoading(false));
+  }, [existing?.uid]);
 
   const GENDER_OPTIONS = ['Male', 'Female', 'Other'] as const;
 
@@ -167,6 +193,70 @@ export default function AdminUserDetailScreen() {
       setSaving(false);
     }
   };
+
+  const payStatusColor = (s: string | null | undefined) => {
+    const map: Record<string, string> = {
+      active: colors.success, pending: colors.secondary, paused: '#9B59B6',
+      cancelled: colors.textDim, halted: colors.error, completed: colors.textDim,
+    };
+    return map[s ?? ''] ?? colors.textDim;
+  };
+
+  const handleSetupAutoPay = async () => {
+    setPayActionLoading(true);
+    try {
+      const { shortUrl } = await createSubscription(existing!.uid, membershipType, memberPrice);
+      if (typeof window !== 'undefined') window.open(shortUrl, '_blank');
+    } catch (err: any) {
+      notify('Error', err.message ?? 'Failed to create subscription.');
+    } finally {
+      setPayActionLoading(false);
+    }
+  };
+
+  const handlePauseSubscription = async () => {
+    setPayActionLoading(true);
+    try {
+      await pauseSubscription(existing!.uid);
+      setPayStatus(prev => prev ? { ...prev, mandateStatus: 'paused' } : prev);
+    } catch (err: any) {
+      notify('Error', err.message ?? 'Failed to pause subscription.');
+    } finally {
+      setPayActionLoading(false);
+    }
+  };
+
+  const handleResumeSubscription = async () => {
+    setPayActionLoading(true);
+    try {
+      await resumeSubscription(existing!.uid);
+      setPayStatus(prev => prev ? { ...prev, mandateStatus: 'active' } : prev);
+    } catch (err: any) {
+      notify('Error', err.message ?? 'Failed to resume subscription.');
+    } finally {
+      setPayActionLoading(false);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    const confirmed = Platform.OS === 'web'
+      ? (window as any).confirm('Cancel this subscription? The member will not be billed again.')
+      : true;
+    if (!confirmed) return;
+    setPayActionLoading(true);
+    try {
+      await cancelSubscription(existing!.uid);
+      setPayStatus(prev => prev ? { ...prev, mandateStatus: 'cancelled' } : prev);
+    } catch (err: any) {
+      notify('Error', err.message ?? 'Failed to cancel subscription.');
+    } finally {
+      setPayActionLoading(false);
+    }
+  };
+
+  const canSetup = !payStatus?.mandateStatus
+    || payStatus.mandateStatus === 'cancelled'
+    || payStatus.mandateStatus === 'completed';
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
@@ -338,6 +428,120 @@ export default function AdminUserDetailScreen() {
               );
             });
           })()}
+        </View>
+      )}
+
+      {/* Payment */}
+      {!isNew && (
+        <View style={styles.section}>
+          <Label>Payment</Label>
+          {payLoading ? (
+            <ActivityIndicator color={colors.primary} style={{ marginVertical: 12 }} />
+          ) : (
+            <>
+              <View style={styles.payStatusRow}>
+                <View style={[styles.statusChip, { backgroundColor: `${payStatusColor(payStatus?.mandateStatus)}22` }]}>
+                  <View style={[styles.statusDot, { backgroundColor: payStatusColor(payStatus?.mandateStatus) }]} />
+                  <Text style={[styles.statusChipText, { color: payStatusColor(payStatus?.mandateStatus) }]}>
+                    {payStatus?.mandateStatus ? payStatus.mandateStatus.toUpperCase() : 'NOT SET UP'}
+                  </Text>
+                </View>
+                {payStatus?.amount != null && (
+                  <Text style={styles.payAmount}>₹{payStatus.amount.toLocaleString('en-IN')}/mo</Text>
+                )}
+              </View>
+
+              {!!payStatus?.nextBillingDate && (
+                <Text style={styles.payMeta}>Next billing: {payStatus.nextBillingDate}</Text>
+              )}
+              {!!payStatus?.graceUntil && (
+                <Text style={[styles.payMeta, { color: colors.error }]}>Grace period until: {payStatus.graceUntil}</Text>
+              )}
+              {(payStatus?.failedPaymentCount ?? 0) > 0 && (
+                <Text style={[styles.payMeta, { color: colors.error }]}>
+                  Failed payments: {payStatus!.failedPaymentCount}
+                </Text>
+              )}
+
+              <View style={styles.payActions}>
+                {canSetup && (
+                  <TouchableOpacity
+                    style={[styles.payBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                    onPress={handleSetupAutoPay}
+                    disabled={payActionLoading || memberPrice <= 0}
+                  >
+                    {payActionLoading
+                      ? <ActivityIndicator color="#000" size="small" />
+                      : <>
+                          <Ionicons name="card-outline" size={15} color="#000" />
+                          <Text style={styles.payBtnDark}>Setup AutoPay</Text>
+                        </>
+                    }
+                  </TouchableOpacity>
+                )}
+                {payStatus?.mandateStatus === 'active' && (
+                  <TouchableOpacity
+                    style={[styles.payBtn, { borderColor: '#9B59B644', backgroundColor: '#9B59B611' }]}
+                    onPress={handlePauseSubscription}
+                    disabled={payActionLoading}
+                  >
+                    <Ionicons name="pause-circle-outline" size={15} color="#9B59B6" />
+                    <Text style={[styles.payBtnLabel, { color: '#9B59B6' }]}>Pause</Text>
+                  </TouchableOpacity>
+                )}
+                {payStatus?.mandateStatus === 'paused' && (
+                  <TouchableOpacity
+                    style={[styles.payBtn, { borderColor: `${colors.success}44`, backgroundColor: `${colors.success}11` }]}
+                    onPress={handleResumeSubscription}
+                    disabled={payActionLoading}
+                  >
+                    <Ionicons name="play-circle-outline" size={15} color={colors.success} />
+                    <Text style={[styles.payBtnLabel, { color: colors.success }]}>Resume</Text>
+                  </TouchableOpacity>
+                )}
+                {(payStatus?.mandateStatus === 'active' || payStatus?.mandateStatus === 'paused') && (
+                  <TouchableOpacity
+                    style={[styles.payBtn, { borderColor: `${colors.error}44`, backgroundColor: `${colors.error}11` }]}
+                    onPress={handleCancelSubscription}
+                    disabled={payActionLoading}
+                  >
+                    <Ionicons name="close-circle-outline" size={15} color={colors.error} />
+                    <Text style={[styles.payBtnLabel, { color: colors.error }]}>Cancel</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {payHistory.length > 0 && (
+                <View style={styles.payHistory}>
+                  <Text style={styles.payHistoryHeading}>Recent Payments</Text>
+                  {payHistory.slice(0, 5).map(e => {
+                    const isSuccess = e.status === 'captured' || e.eventType === 'subscription.charged';
+                    const isFailed = e.status === 'failed';
+                    return (
+                      <View key={e.id} style={styles.payHistoryRow}>
+                        <Ionicons
+                          name={isSuccess ? 'checkmark-circle' : isFailed ? 'close-circle' : 'time'}
+                          size={14}
+                          color={isSuccess ? colors.success : isFailed ? colors.error : colors.textDim}
+                        />
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.payHistoryEvent}>
+                            {e.eventType.replace('subscription.', '').replace('payment.', '')}
+                          </Text>
+                          {!!e.createdAt && (
+                            <Text style={styles.payHistoryDate}>{e.createdAt.slice(0, 10)}</Text>
+                          )}
+                        </View>
+                        {e.amount != null && (
+                          <Text style={styles.payHistoryAmount}>₹{e.amount.toLocaleString('en-IN')}</Text>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </>
+          )}
         </View>
       )}
 
@@ -566,6 +770,32 @@ const styles = StyleSheet.create({
     backgroundColor: colors.secondary,
   },
   promoGrantBtnText: { color: '#000', fontSize: 13, fontWeight: '800' },
+  payStatusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  statusChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusChipText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  payAmount: { color: colors.text, fontSize: 15, fontWeight: '700' },
+  payMeta: { color: colors.textMuted, fontSize: 12, marginBottom: 3 },
+  payActions: { flexDirection: 'row', gap: 8, marginTop: 10, marginBottom: 8, flexWrap: 'wrap' as const },
+  payBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, borderWidth: 1,
+  },
+  payBtnDark: { color: '#000', fontSize: 13, fontWeight: '800' },
+  payBtnLabel: { fontSize: 13, fontWeight: '700' },
+  payHistory: { backgroundColor: colors.bg, borderRadius: 10, padding: 12, marginTop: 4 },
+  payHistoryHeading: {
+    color: colors.textDim, fontSize: 10, fontWeight: '700',
+    textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8,
+  },
+  payHistoryRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingVertical: 7, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)',
+  },
+  payHistoryEvent: { color: colors.text, fontSize: 12, fontWeight: '600' },
+  payHistoryDate: { color: colors.textDim, fontSize: 11, marginTop: 1 },
+  payHistoryAmount: { color: colors.secondary, fontSize: 13, fontWeight: '700' },
+
   promoActiveRow: { flexDirection: 'row', alignItems: 'center' },
   promoActiveFeature: { color: colors.text, fontSize: 13, fontWeight: '700' },
   promoActiveLabel: { color: colors.secondary, fontSize: 11, fontWeight: '600', marginTop: 1 },
