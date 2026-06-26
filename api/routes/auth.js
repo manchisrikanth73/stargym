@@ -13,8 +13,8 @@ function serializeDoc(data) {
 }
 
 router.post('/profile', requireAuth, async (req, res) => {
-  const uid = req.uid;
-  const { email, displayName, age = null, gender = '', weightKg = null } = req.body;
+  const { uid: bodyUid, email, displayName, age = null, gender = '', weightKg = null } = req.body;
+  const uid = (req.isAdmin && bodyUid) ? bodyUid : req.uid;
   if (!email || !displayName) {
     return res.status(400).json({ error: 'email and displayName required' });
   }
