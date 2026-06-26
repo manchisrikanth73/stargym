@@ -281,21 +281,6 @@ export default function DashboardScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Quick Actions — members only */}
-      {!isAdmin && (
-        <>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.actionsRow}>
-            <ActionButton icon="bar-chart" label="Progress" color="#9B59B6" onPress={() => navigation.navigate('Progress' as never)} />
-            <ActionButton
-              icon="barbell"
-              label="Workouts"
-              color="#E74C3C"
-              onPress={() => navigation.navigate('Workouts' as never)}
-            />
-          </View>
-        </>
-      )}
 
       {/* Admin: recent check-ins / Member: motivation */}
       {isAdmin ? (
@@ -394,22 +379,6 @@ export default function DashboardScreen() {
   );
 }
 
-function ActionButton({
-  icon, label, color, onPress,
-}: {
-  icon: string; label: string; color: string; onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      style={[styles.actionBtn, { borderColor: `${color}44`, backgroundColor: `${color}18` }]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <Ionicons name={icon as any} size={24} color={color} />
-      <Text style={[styles.actionLabel, { color }]}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
@@ -502,16 +471,6 @@ const styles = StyleSheet.create({
   checkinTitle: { color: '#fff', fontSize: 20, fontWeight: '700' },
   checkinSub: { color: 'rgba(255,255,255,0.75)', fontSize: 13, marginTop: 2 },
   sectionTitle: { color: colors.text, fontSize: 18, fontWeight: '700', marginHorizontal: 20, marginBottom: 14 },
-  actionsRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginBottom: 24 },
-  actionBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-    gap: 8,
-  },
-  actionLabel: { fontSize: 11, fontWeight: '600' },
   motivCard: {
     marginHorizontal: 20,
     backgroundColor: colors.surface,
