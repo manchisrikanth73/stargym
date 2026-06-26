@@ -296,71 +296,54 @@ export default function SettingsScreen() {
                   </View>
                 )}
 
-                {/* ── My Membership ── */}
-                <View style={styles.menuSubDivider} />
-                <TouchableOpacity style={styles.subRow} onPress={() => toggleSub('membership')}>
-                  <Text style={styles.subLabel}>My Membership</Text>
-                  <Ionicons
-                    name={activeSubSection === 'membership' ? 'chevron-down' : 'chevron-forward'}
-                    size={16} color={colors.textMuted}
-                  />
-                </TouchableOpacity>
-                {activeSubSection === 'membership' && (
-                  <View style={styles.subContent}>
-                    {isAdmin ? (
-                      <TouchableOpacity
-                        style={styles.billingLink}
-                        onPress={() => navigation.navigate('Billing' as never)}
-                      >
-                        <Ionicons name="card-outline" size={18} color={colors.primary} />
-                        <Text style={styles.billingLinkText}>Manage plans in Billing</Text>
-                        <Ionicons name="chevron-forward" size={16} color={colors.primary} />
-                      </TouchableOpacity>
-                    ) : (
-                      <View style={styles.subFormCard}>
-                        <InfoRow label="Plan" value={memberTypeCap || '—'} />
-                        <View style={styles.fieldDivider} />
-                        <InfoRow label="Status" value={isActive ? 'Active' : 'Inactive'} valueColor={isActive ? colors.success : colors.error} />
-                        <View style={styles.fieldDivider} />
-                        <InfoRow label="Start" value={activationStartDate ? dayjs(activationStartDate).format('DD MMM YYYY') : '—'} />
-                        <View style={styles.fieldDivider} />
-                        <InfoRow label="Expiry" value={activationEndDate ? dayjs(activationEndDate).format('DD MMM YYYY') : '—'} />
-                        {joinedAt && (
-                          <>
-                            <View style={styles.fieldDivider} />
-                            <InfoRow label="Joined" value={dayjs(joinedAt).format('DD MMM YYYY')} />
-                          </>
-                        )}
+                {!isAdmin && (
+                  <>
+                    {/* ── My Membership ── */}
+                    <View style={styles.menuSubDivider} />
+                    <TouchableOpacity style={styles.subRow} onPress={() => toggleSub('membership')}>
+                      <Text style={styles.subLabel}>My Membership</Text>
+                      <Ionicons
+                        name={activeSubSection === 'membership' ? 'chevron-down' : 'chevron-forward'}
+                        size={16} color={colors.textMuted}
+                      />
+                    </TouchableOpacity>
+                    {activeSubSection === 'membership' && (
+                      <View style={styles.subContent}>
+                        <View style={styles.subFormCard}>
+                          <InfoRow label="Plan" value={memberTypeCap || '—'} />
+                          <View style={styles.fieldDivider} />
+                          <InfoRow label="Status" value={isActive ? 'Active' : 'Inactive'} valueColor={isActive ? colors.success : colors.error} />
+                          <View style={styles.fieldDivider} />
+                          <InfoRow label="Start" value={activationStartDate ? dayjs(activationStartDate).format('DD MMM YYYY') : '—'} />
+                          <View style={styles.fieldDivider} />
+                          <InfoRow label="Expiry" value={activationEndDate ? dayjs(activationEndDate).format('DD MMM YYYY') : '—'} />
+                          {joinedAt && (
+                            <>
+                              <View style={styles.fieldDivider} />
+                              <InfoRow label="Joined" value={dayjs(joinedAt).format('DD MMM YYYY')} />
+                            </>
+                          )}
+                        </View>
                       </View>
                     )}
-                  </View>
-                )}
 
-                {/* ── My Billing Info ── */}
-                <View style={styles.menuSubDivider} />
-                <TouchableOpacity style={styles.subRow} onPress={() => toggleSub('billing')}>
-                  <Text style={styles.subLabel}>My Billing Info</Text>
-                  <Ionicons
-                    name={activeSubSection === 'billing' ? 'chevron-down' : 'chevron-forward'}
-                    size={16} color={colors.textMuted}
-                  />
-                </TouchableOpacity>
-                {activeSubSection === 'billing' && (
-                  <View style={styles.subContent}>
-                    <View style={styles.subFormCard}>
-                      {isAdmin ? (
-                        <>
-                          <InfoRow label="Role" value="Administrator" />
-                          <View style={styles.fieldDivider} />
-                          <InfoRow label="Billing" value="N/A" />
-                        </>
-                      ) : (
-                        <>
+                    {/* ── My Billing Info ── */}
+                    <View style={styles.menuSubDivider} />
+                    <TouchableOpacity style={styles.subRow} onPress={() => toggleSub('billing')}>
+                      <Text style={styles.subLabel}>My Billing Info</Text>
+                      <Ionicons
+                        name={activeSubSection === 'billing' ? 'chevron-down' : 'chevron-forward'}
+                        size={16} color={colors.textMuted}
+                      />
+                    </TouchableOpacity>
+                    {activeSubSection === 'billing' && (
+                      <View style={styles.subContent}>
+                        <View style={styles.subFormCard}>
                           <InfoRow label="Plan" value={memberTypeCap || '—'} />
                           <View style={styles.fieldDivider} />
                           <InfoRow
                             label="Monthly fee"
-                            value={memberPlanPrice != null && memberPlanPrice > 0 ? `$${memberPlanPrice}` : '—'}
+                            value={memberPlanPrice != null && memberPlanPrice > 0 ? `₹${memberPlanPrice}` : '—'}
                             valueColor={colors.secondary}
                           />
                           <View style={styles.fieldDivider} />
@@ -368,10 +351,10 @@ export default function SettingsScreen() {
                             label="Next renewal"
                             value={activationEndDate ? dayjs(activationEndDate).format('DD MMM YYYY') : '—'}
                           />
-                        </>
-                      )}
-                    </View>
-                  </View>
+                        </View>
+                      </View>
+                    )}
+                  </>
                 )}
               </>
             )}
@@ -380,35 +363,39 @@ export default function SettingsScreen() {
           {/* ── Other rows ── */}
           <View style={[styles.menuCard, { marginTop: 12 }]}>
 
-            <TouchableOpacity style={styles.menuRow} onPress={() => navigation.navigate('MemberInbox' as never)}>
-              <View style={styles.menuIconWrap}>
-                <Ionicons name="mail-outline" size={22} color={colors.textMuted} />
-              </View>
-              <Text style={styles.menuLabel}>Inbox</Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
-            </TouchableOpacity>
+            {!isAdmin && (
+              <>
+                <TouchableOpacity style={styles.menuRow} onPress={() => navigation.navigate('MemberInbox' as never)}>
+                  <View style={styles.menuIconWrap}>
+                    <Ionicons name="mail-outline" size={22} color={colors.textMuted} />
+                  </View>
+                  <Text style={styles.menuLabel}>Inbox</Text>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+                </TouchableOpacity>
 
-            <View style={styles.menuDivider} />
+                <View style={styles.menuDivider} />
 
-            <TouchableOpacity style={styles.menuRow} onPress={() => setReferModal(true)}>
-              <View style={styles.menuIconWrap}>
-                <Ionicons name="gift-outline" size={22} color={colors.textMuted} />
-              </View>
-              <Text style={styles.menuLabel}>Refer a Friend</Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
-            </TouchableOpacity>
+                <TouchableOpacity style={styles.menuRow} onPress={() => setReferModal(true)}>
+                  <View style={styles.menuIconWrap}>
+                    <Ionicons name="gift-outline" size={22} color={colors.textMuted} />
+                  </View>
+                  <Text style={styles.menuLabel}>Refer a Friend</Text>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+                </TouchableOpacity>
 
-            <View style={styles.menuDivider} />
+                <View style={styles.menuDivider} />
 
-            <TouchableOpacity style={styles.menuRow} onPress={() => notify('Legal', 'Coming soon.')}>
-              <View style={styles.menuIconWrap}>
-                <Ionicons name="document-text-outline" size={22} color={colors.textMuted} />
-              </View>
-              <Text style={styles.menuLabel}>Legal</Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
-            </TouchableOpacity>
+                <TouchableOpacity style={styles.menuRow} onPress={() => notify('Legal', 'Coming soon.')}>
+                  <View style={styles.menuIconWrap}>
+                    <Ionicons name="document-text-outline" size={22} color={colors.textMuted} />
+                  </View>
+                  <Text style={styles.menuLabel}>Legal</Text>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+                </TouchableOpacity>
 
-            <View style={styles.menuDivider} />
+                <View style={styles.menuDivider} />
+              </>
+            )}
 
             <TouchableOpacity style={styles.menuRow} onPress={logOut}>
               <View style={[styles.menuIconWrap, { backgroundColor: `${colors.error}15` }]}>

@@ -22,6 +22,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Inbox',      icon: 'mail-outline',     screen: 'Inbox',      adminOnly: true },
   { label: 'Billing',    icon: 'card-outline',     screen: 'Billing',    adminOnly: true },
   { label: 'Promotions', icon: 'pricetag-outline', screen: 'Promotions', adminOnly: true },
+  { label: 'Legal',      icon: 'document-text-outline', screen: null,    adminOnly: true },
   { label: 'Settings',   icon: 'settings-outline', screen: 'Settings',   adminOnly: true },
 ];
 
