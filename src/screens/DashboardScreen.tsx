@@ -15,7 +15,7 @@ import { DrawerActions, useNavigation, useFocusEffect } from '@react-navigation/
 import dayjs from 'dayjs';
 import { auth } from '../services/firebase';
 import { isCheckedInToday, getMonthlyCount, subscribeRecentCheckins } from '../services/attendance';
-import { getUserProfile, getAllUsers, updateUserProfile } from '../services/users';
+import { getUserProfile, updateUserProfile } from '../services/users';
 import { getTodayLog } from '../services/workouts';
 import { EXERCISES } from '../data/exercises';
 import { calcExerciseCalories } from '../utils/calories';
@@ -40,9 +40,6 @@ export default function DashboardScreen() {
   const [monthlyCount, setMonthlyCount] = useState(0);
   const [isActive, setIsActive] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [memberTotal, setMemberTotal] = useState(0);
-  const [memberActive, setMemberActive] = useState(0);
-  const [memberInactive, setMemberInactive] = useState(0);
   const [showGymQR, setShowGymQR] = useState(false);
   const [showAllCheckins, setShowAllCheckins] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -106,14 +103,7 @@ export default function DashboardScreen() {
     setActivationStartDate(profile?.activationStartDate ?? null);
     setActivationEndDate(endDate);
     setMembershipType(profile?.membershipType ?? null);
-    const admin = profile?.role === 'admin';
-    setIsAdmin(admin);
-    if (admin) {
-      const all = await getAllUsers();
-      setMemberTotal(all.length);
-      setMemberActive(all.filter(u => u.isActive).length);
-      setMemberInactive(all.filter(u => !u.isActive).length);
-    }
+    setIsAdmin(profile?.role === 'admin');
   }, [user?.uid]);
 
   useFocusEffect(useCallback(() => { loadStats(); }, [loadStats]));
@@ -197,29 +187,8 @@ export default function DashboardScreen() {
         </Text>
       </View>
 
-      {/* Stats — admin sees member overview, members see session stats */}
-      {isAdmin ? (
-        <>
-          <Text style={styles.sectionTitle}>Member Overview</Text>
-          <View style={styles.statsRow}>
-            <View style={[styles.statCard, { borderColor: `${colors.primary}44` }]}>
-              <Ionicons name="people-outline" size={20} color={colors.primary} />
-              <Text style={[styles.statValue, { color: colors.primary }]}>{memberTotal}</Text>
-              <Text style={styles.statLabel}>Total</Text>
-            </View>
-            <View style={[styles.statCard, { borderColor: `${colors.success}44` }]}>
-              <Ionicons name="checkmark-circle-outline" size={20} color={colors.success} />
-              <Text style={[styles.statValue, { color: colors.success }]}>{memberActive}</Text>
-              <Text style={styles.statLabel}>Active</Text>
-            </View>
-            <View style={[styles.statCard, { borderColor: `${colors.textMuted}44` }]}>
-              <Ionicons name="pause-circle-outline" size={20} color={colors.textMuted} />
-              <Text style={[styles.statValue, { color: colors.textMuted }]}>{memberInactive}</Text>
-              <Text style={styles.statLabel}>Inactive</Text>
-            </View>
-          </View>
-        </>
-      ) : (
+      {/* Stats — members see session stats */}
+      {!isAdmin && (
         <>
           <View style={styles.statsRow}>
             <View style={[styles.statCard, { borderColor: `${colors.primary}44` }]}>
