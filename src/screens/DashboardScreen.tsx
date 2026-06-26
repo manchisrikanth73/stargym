@@ -303,7 +303,7 @@ export default function DashboardScreen() {
         <>
           <View style={styles.sectionTitleRow}>
             <Text style={[styles.sectionTitle, { marginHorizontal: 0, marginBottom: 0 }]}>Recent Check-ins (Last 24h)</Text>
-            {recentCheckins.length > 1 && (
+            {recentCheckins.length > 5 && (
               <TouchableOpacity onPress={() => setShowAllCheckins(true)}>
                 <Text style={styles.moreLink}>more</Text>
               </TouchableOpacity>
@@ -316,8 +316,8 @@ export default function DashboardScreen() {
             </View>
           ) : (
             <View style={styles.checkinList}>
-              {[recentCheckins[0]].map((item, i) => (
-                <View key={i} style={styles.checkinRow}>
+              {recentCheckins.slice(0, 5).map((item, i) => (
+                <View key={i} style={[styles.checkinRow, i < Math.min(recentCheckins.length, 5) - 1 && styles.checkinRowBorder]}>
                   <View style={styles.checkinAvatar}>
                     <Text style={styles.checkinAvatarText}>{item.name[0]?.toUpperCase() ?? '?'}</Text>
                   </View>
