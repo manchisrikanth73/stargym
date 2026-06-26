@@ -276,35 +276,27 @@ export default function DashboardScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Quick Actions */}
-      <Text style={styles.sectionTitle}>Quick Actions</Text>
-      <View style={styles.actionsRow}>
-        {isAdmin ? (
-          <ActionButton
-            icon="people-outline"
-            label="Members"
-            color={colors.primary}
-            onPress={() => navigation.navigate('Admin')}
-          />
-        ) : (
-          <ActionButton
-            icon="calendar-month"
-            label="Attendance"
-            color={colors.primary}
-            onPress={() => navigation.navigate('Calendar')}
-          />
-        )}
-        {isAdmin
-          ? <ActionButton icon="settings-outline" label="Settings" color="#9B59B6" onPress={() => navigation.navigate('Settings')} />
-          : <ActionButton icon="bar-chart" label="Progress" color="#9B59B6" onPress={() => navigation.navigate('Progress' as never)} />
-        }
-        <ActionButton
-          icon="barbell"
-          label="Workouts"
-          color="#E74C3C"
-          onPress={() => navigation.navigate('Workouts' as never)}
-        />
-      </View>
+      {/* Quick Actions — members only */}
+      {!isAdmin && (
+        <>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.actionsRow}>
+            <ActionButton
+              icon="calendar-month"
+              label="Attendance"
+              color={colors.primary}
+              onPress={() => navigation.navigate('Calendar')}
+            />
+            <ActionButton icon="bar-chart" label="Progress" color="#9B59B6" onPress={() => navigation.navigate('Progress' as never)} />
+            <ActionButton
+              icon="barbell"
+              label="Workouts"
+              color="#E74C3C"
+              onPress={() => navigation.navigate('Workouts' as never)}
+            />
+          </View>
+        </>
+      )}
 
       {/* Admin: recent check-ins / Member: motivation */}
       {isAdmin ? (
