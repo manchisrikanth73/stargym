@@ -25,6 +25,7 @@
     "firebase": "^10.14.1",
     "firebase-admin": "^14.1.0",
     "jsqr": "^1.4.0",
+    "razorpay": "^2.9.6",
     "react": "18.3.1",
     "react-dom": "^18.3.1",
     "react-native": "0.81.5",
