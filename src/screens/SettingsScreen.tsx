@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
 import { updateProfile } from 'firebase/auth';
 import { auth } from '../services/firebase';
+import { logOut } from '../services/auth';
 import { getUserProfile, updateUserProfile } from '../services/users';
 import {
   getMembershipPrices, setMembershipPrices, MembershipPrices,
@@ -303,6 +304,11 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
 
+          <TouchableOpacity style={styles.logoutBtn} onPress={logOut}>
+            <Ionicons name="log-out-outline" size={20} color={colors.error} />
+            <Text style={styles.logoutBtnText}>Log Out</Text>
+          </TouchableOpacity>
+
           <View style={{ height: 32 }} />
         </ScrollView>
       )}
@@ -406,6 +412,14 @@ const styles = StyleSheet.create({
     borderRadius: 14, alignItems: 'center', justifyContent: 'center',
   },
   saveBtnDisabled: { opacity: 0.5 },
+  logoutBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, marginTop: 24, paddingVertical: 14,
+    borderRadius: 14, borderWidth: 1,
+    borderColor: `${colors.error}44`,
+    backgroundColor: `${colors.error}10`,
+  },
+  logoutBtnText: { color: colors.error, fontSize: 15, fontWeight: '700' },
   saveBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
 
   priceHeader: {
