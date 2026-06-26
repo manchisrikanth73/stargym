@@ -125,9 +125,15 @@ export default function SettingsScreen() {
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())}>
-          <Ionicons name="menu" size={28} color={colors.text} />
-        </TouchableOpacity>
+        {isAdmin ? (
+          <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())}>
+            <Ionicons name="menu" size={28} color={colors.text} />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={28} color={colors.text} />
+          </TouchableOpacity>
+        )}
         <Text style={styles.heading}>Settings</Text>
         <TouchableOpacity style={styles.backDashBtn} onPress={() => navigation.navigate('Main', { screen: 'Dashboard' })}>
           <Ionicons name="home-outline" size={14} color={colors.textMuted} />
