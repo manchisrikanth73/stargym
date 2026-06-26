@@ -20,7 +20,7 @@ type NavItem = { label: string; icon: string; screen: string | null; adminOnly?:
 const NAV_ITEMS: NavItem[] = [
   { label: 'Members',    icon: 'people-outline',   screen: 'Admin',      adminOnly: true },
   { label: 'Inbox',      icon: 'mail-outline',     screen: 'Inbox',      adminOnly: true },
-  { label: 'Billing',    icon: 'card-outline',     screen: 'Billing',    adminOnly: true },
+  { label: 'Membership Plans', icon: 'card-outline', screen: 'Billing',    adminOnly: true },
   { label: 'Promotions', icon: 'pricetag-outline', screen: 'Promotions', adminOnly: true },
   { label: 'Legal',      icon: 'document-text-outline', screen: null,    adminOnly: true },
   { label: 'Settings',   icon: 'settings-outline', screen: 'Settings',   adminOnly: true },

@@ -80,7 +80,7 @@ export default function BillingScreen() {
         <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())}>
           <Ionicons name="menu" size={28} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.heading}>Billing</Text>
+        <Text style={styles.heading}>Membership Plans</Text>
         <View style={{ width: 28 }} />
       </View>
 
