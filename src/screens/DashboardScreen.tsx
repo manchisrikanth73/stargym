@@ -150,13 +150,17 @@ export default function DashboardScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())}>
-          <Ionicons name="menu" size={28} color={colors.text} />
-        </TouchableOpacity>
+        {isAdmin ? (
+          <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())}>
+            <Ionicons name="menu" size={28} color={colors.text} />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 28 }} />
+        )}
         {!isAdmin && (
-          <View style={styles.avatar}>
+          <TouchableOpacity style={styles.avatar} onPress={() => navigation.navigate('Settings' as never)}>
             <Text style={styles.avatarText}>{displayName[0].toUpperCase()}</Text>
-          </View>
+          </TouchableOpacity>
         )}
       </View>
 

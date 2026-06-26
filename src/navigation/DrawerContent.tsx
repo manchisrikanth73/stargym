@@ -16,10 +16,8 @@ import { colors } from '../theme/colors';
 type NavItem = { label: string; icon: string; screen: string | null; adminOnly?: boolean; memberOnly?: boolean };
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', icon: 'home-outline', screen: 'Dashboard' },
-  { label: 'Check In', icon: 'qr-code-outline', screen: 'Checkin', memberOnly: true },
   { label: 'Members', icon: 'people-outline', screen: 'Admin', adminOnly: true },
-  { label: 'Settings', icon: 'settings-outline', screen: 'Settings' },
+  { label: 'Settings', icon: 'settings-outline', screen: 'Settings', adminOnly: true },
 ];
 
 export default function DrawerContent(props: DrawerContentComponentProps) {
