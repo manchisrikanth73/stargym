@@ -21,6 +21,7 @@ import { EXERCISES } from '../data/exercises';
 import { calcExerciseCalories } from '../utils/calories';
 import { colors } from '../theme/colors';
 import { GYM_CHECKIN_CODE } from '../config';
+import MemberTabBar from '../components/MemberTabBar';
 
 const MEMBERSHIP_COLOR: Record<string, string> = {
   basic: colors.primary,
@@ -144,8 +145,9 @@ export default function DashboardScreen() {
   };
 
   return (
+    <View style={styles.root}>
     <ScrollView
-      style={styles.root}
+      style={{ flex: 1 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
       {/* Header */}
@@ -387,6 +389,8 @@ export default function DashboardScreen() {
         </View>
       </Modal>
     </ScrollView>
+    {!isAdmin && <MemberTabBar />}
+    </View>
   );
 }
 

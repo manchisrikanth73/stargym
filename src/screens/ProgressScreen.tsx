@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import MemberTabBar from '../components/MemberTabBar';
 import { Calendar, DateData } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { getAttendanceDates, getMonthlyCount } from '../services/attendance';
 import { getWorkoutHistory } from '../services/workouts';
@@ -105,13 +105,10 @@ export default function ProgressScreen() {
   const maxCount = Math.max(...monthly.map(m => m.count), 1);
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.container}>
+    <View style={styles.root}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
       <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.heading}>My Progress</Text>
-        <View style={{ width: 24 }} />
+        <Text style={styles.heading}>Progress</Text>
       </View>
 
       {loading ? (
@@ -226,17 +223,16 @@ export default function ProgressScreen() {
         </>
       )}
     </ScrollView>
+    <MemberTabBar />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  container: { padding: 20, paddingBottom: 40 },
-  headerRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingTop: 44, marginBottom: 24,
-  },
-  heading: { color: colors.text, fontSize: 18, fontWeight: '800' },
+  container: { padding: 20, paddingBottom: 20 },
+  headerRow: { paddingTop: 54, marginBottom: 24 },
+  heading: { color: colors.text, fontSize: 20, fontWeight: '800' },
   card: {
     backgroundColor: colors.surface, borderRadius: 16, padding: 16,
     marginBottom: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',

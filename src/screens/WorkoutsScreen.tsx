@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import MemberTabBar from '../components/MemberTabBar';
 import { auth } from '../services/firebase';
 import { getUserProfile } from '../services/users';
 import { subscribeWorkoutAccess } from '../services/gymSettings';
@@ -132,11 +133,7 @@ export default function WorkoutsScreen() {
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={28} color={colors.text} />
-        </TouchableOpacity>
         <Text style={styles.heading}>Workouts</Text>
-        <View style={{ width: 28 }} />
       </View>
 
       {promoActive && (
@@ -243,9 +240,10 @@ export default function WorkoutsScreen() {
           <Text style={styles.tipText}>{BEGINNER_TIP}</Text>
         </View>
 
-        <View style={{ height: 32 }} />
+        <View style={{ height: 16 }} />
       </ScrollView>
       )}
+      <MemberTabBar />
     </View>
   );
 }
@@ -253,7 +251,6 @@ export default function WorkoutsScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingTop: 54, paddingBottom: 14,
   },
   heading: { color: colors.text, fontSize: 20, fontWeight: '800' },

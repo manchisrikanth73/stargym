@@ -12,6 +12,7 @@ import ExerciseLibraryScreen from '../screens/ExerciseLibraryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import ProgressScreen from '../screens/ProgressScreen';
 import DrawerContent from './DrawerContent';
+
 import { colors } from '../theme/colors';
 
 const Drawer = createDrawerNavigator();
@@ -24,6 +25,7 @@ function DrawerNav() {
       screenOptions={{
         headerShown: false,
         drawerStyle: { backgroundColor: colors.bg, width: 280 },
+        swipeEnabled: false,
       }}
     >
       <Drawer.Screen name="Dashboard" component={DashboardScreen} />
@@ -32,6 +34,7 @@ function DrawerNav() {
       <Drawer.Screen name="Admin" component={AdminScreen} />
       <Drawer.Screen name="Workouts" component={WorkoutsScreen} />
       <Drawer.Screen name="Settings" component={SettingsScreen} />
+      <Drawer.Screen name="Progress" component={ProgressScreen} />
     </Drawer.Navigator>
   );
 }
@@ -41,7 +44,6 @@ export default function AppNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Main" component={DrawerNav} />
       <Stack.Screen name="AdminUserDetail" component={AdminUserDetailScreen} />
-      <Stack.Screen name="Progress" component={ProgressScreen} />
       <Stack.Screen name="WorkoutLog" component={WorkoutLogScreen} />
       <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} />
     </Stack.Navigator>
