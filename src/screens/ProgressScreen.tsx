@@ -116,10 +116,6 @@ export default function ProgressScreen() {
         <>
           {/* Attendance Calendar */}
           <View style={styles.card}>
-            <View style={styles.calHeader}>
-              <Text style={styles.cardLabel}>Attendance Calendar</Text>
-              <Text style={styles.calMonthCount}>{calMonthCount} sessions · {dayjs(currentMonth).format('MMM YYYY')}</Text>
-            </View>
             <Calendar
               markedDates={markedDates}
               onMonthChange={handleMonthChange}
