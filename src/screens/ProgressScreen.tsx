@@ -114,33 +114,6 @@ export default function ProgressScreen() {
         <ActivityIndicator color={colors.primary} style={{ marginTop: 60 }} />
       ) : (
         <>
-          {/* This month card */}
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>This Month</Text>
-            <Text style={styles.bigNumber}>{thisMonth}<Text style={styles.bigGoal}> / {GOAL}</Text></Text>
-            <Text style={styles.cardSub}>check-ins · goal {GOAL} sessions</Text>
-            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: `${pct * 100}%` as any }]} />
-            </View>
-            <Text style={styles.progressPct}>{Math.round(pct * 100)}% of monthly goal</Text>
-          </View>
-
-          {/* Monthly breakdown */}
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>Last 6 Months</Text>
-            <View style={styles.barChart}>
-              {monthly.map(m => (
-                <View key={m.label} style={styles.barCol}>
-                  <Text style={styles.barCount}>{m.count > 0 ? m.count : ''}</Text>
-                  <View style={styles.barBg}>
-                    <View style={[styles.barFill, { height: `${(m.count / maxCount) * 100}%` as any }]} />
-                  </View>
-                  <Text style={styles.barLabel}>{m.label}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
           {/* Attendance Calendar */}
           <View style={styles.card}>
             <View style={styles.calHeader}>
@@ -176,6 +149,33 @@ export default function ProgressScreen() {
                 <View style={[styles.legendDot, { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.textDim }]} />
                 <Text style={styles.legendLabel}>Absent</Text>
               </View>
+            </View>
+          </View>
+
+          {/* This month card */}
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>This Month</Text>
+            <Text style={styles.bigNumber}>{thisMonth}<Text style={styles.bigGoal}> / {GOAL}</Text></Text>
+            <Text style={styles.cardSub}>check-ins · goal {GOAL} sessions</Text>
+            <View style={styles.progressBarBg}>
+              <View style={[styles.progressBarFill, { width: `${pct * 100}%` as any }]} />
+            </View>
+            <Text style={styles.progressPct}>{Math.round(pct * 100)}% of monthly goal</Text>
+          </View>
+
+          {/* Monthly breakdown */}
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>Last 6 Months</Text>
+            <View style={styles.barChart}>
+              {monthly.map(m => (
+                <View key={m.label} style={styles.barCol}>
+                  <Text style={styles.barCount}>{m.count > 0 ? m.count : ''}</Text>
+                  <View style={styles.barBg}>
+                    <View style={[styles.barFill, { height: `${(m.count / maxCount) * 100}%` as any }]} />
+                  </View>
+                  <Text style={styles.barLabel}>{m.label}</Text>
+                </View>
+              ))}
             </View>
           </View>
 
