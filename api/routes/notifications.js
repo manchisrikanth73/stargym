@@ -19,9 +19,11 @@ router.get('/mine', requireAuth, async (req, res) => {
     const snap = await db()
       .collection('notifications')
       .where('recipientUid', '==', req.uid)
-      .orderBy('createdAt', 'desc')
       .get();
-    res.json(snap.docs.map(serializeDoc));
+    const docs = snap.docs.map(serializeDoc).sort((a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    res.json(docs);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
