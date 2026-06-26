@@ -3,7 +3,7 @@ const { requireAuth, requireAdmin } = require('../middleware/auth');
 const admin = require('../admin');
 
 const db = () => admin.firestore();
-const SAFE_MEMBER_FIELDS = ['displayName', 'phone', 'age', 'gender'];
+const SAFE_MEMBER_FIELDS = ['displayName', 'phone', 'age', 'gender', 'weightKg', 'photoURL'];
 
 function serializeDoc(data) {
   const out = {};

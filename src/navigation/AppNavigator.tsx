@@ -11,6 +11,7 @@ import WorkoutLogScreen from '../screens/WorkoutLogScreen';
 import ExerciseLibraryScreen from '../screens/ExerciseLibraryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import ProgressScreen from '../screens/ProgressScreen';
+import InboxScreen from '../screens/InboxScreen';
 import DrawerContent from './DrawerContent';
 
 import { colors } from '../theme/colors';
@@ -35,6 +36,7 @@ function DrawerNav() {
       <Drawer.Screen name="Workouts" component={WorkoutsScreen} />
       <Drawer.Screen name="Settings" component={SettingsScreen} />
       <Drawer.Screen name="Progress" component={ProgressScreen} />
+      <Drawer.Screen name="Inbox" component={InboxScreen} />
     </Drawer.Navigator>
   );
 }

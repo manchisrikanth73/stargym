@@ -12,12 +12,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { auth } from '../services/firebase';
 import { logOut } from '../services/auth';
 import { getUserProfile } from '../services/users';
+import { subscribeReferralUnreadCount } from '../services/referrals';
 import { colors } from '../theme/colors';
 
 type NavItem = { label: string; icon: string; screen: string | null; adminOnly?: boolean; memberOnly?: boolean };
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Members', icon: 'people-outline', screen: 'Admin', adminOnly: true },
+  { label: 'Inbox',   icon: 'mail-outline',   screen: 'Inbox', adminOnly: true },
   { label: 'Settings', icon: 'settings-outline', screen: 'Settings', adminOnly: true },
 ];
 
@@ -27,6 +29,7 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
   const email = user?.email ?? '';
   const [isAdmin, setIsAdmin] = useState(false);
   const [photoURL, setPhotoURL] = useState<string | null>(user?.photoURL ?? null);
+  const [inboxUnread, setInboxUnread] = useState(0);
 
   useEffect(() => {
     if (user?.uid) {
@@ -38,6 +41,11 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
         .catch(() => setIsAdmin(false));
     }
   }, [user?.uid]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    return subscribeReferralUnreadCount(count => setInboxUnread(count));
+  }, [isAdmin]);
 
   const visibleItems = NAV_ITEMS.filter(item => {
     if (item.adminOnly) return isAdmin;
@@ -92,7 +100,16 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
               <View style={{ flex: 1 }}>
                 <Text style={[styles.itemLabel, disabled && { color: colors.textDim }]}>{item.label}</Text>
               </View>
-              {!item.screen && <Text style={styles.comingSoon}>soon</Text>}
+              {!item.screen
+                ? <Text style={styles.comingSoon}>soon</Text>
+                : item.label === 'Inbox' && inboxUnread > 0
+                  ? (
+                    <View style={styles.navBadge}>
+                      <Text style={styles.navBadgeText}>{inboxUnread}</Text>
+                    </View>
+                  )
+                  : null
+              }
             </TouchableOpacity>
           );
         })}
@@ -135,6 +152,11 @@ const styles = StyleSheet.create({
   itemLabel: { color: colors.text, fontSize: 15, fontWeight: '500', flex: 1 },
   itemDisabled: { opacity: 0.5 },
   comingSoon: { color: colors.textDim, fontSize: 10, fontWeight: '600' },
+  navBadge: {
+    backgroundColor: colors.primary, borderRadius: 10,
+    minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5,
+  },
+  navBadgeText: { color: '#000', fontSize: 11, fontWeight: '800' },
   logoutBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 18, paddingHorizontal: 20 },
   logoutLabel: { color: colors.error, fontSize: 15, fontWeight: '600' },
 });

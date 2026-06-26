@@ -83,4 +83,24 @@ router.get('/workout-access', async (req, res) => {
   }
 });
 
+router.get('/referrals-unread', async (req, res) => {
+  try {
+    const user = await verifyToken(req.query.token);
+    if (!user.isAdmin) return res.status(403).json({ error: 'Admin only' });
+
+    startSSE(res);
+
+    const unsub = db().collection('referrals').where('read', '==', false).onSnapshot(snap => {
+      res.write(`data: ${JSON.stringify({ count: snap.size })}\n\n`);
+    }, err => {
+      console.error('[SSE /referrals-unread]', err.message);
+      res.end();
+    });
+
+    res.on('close', unsub);
+  } catch (err) {
+    res.status(401).json({ error: err.message });
+  }
+});
+
 module.exports = router;

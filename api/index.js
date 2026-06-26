@@ -13,6 +13,7 @@ router.use('/attendance', require('./routes/attendance'));
 router.use('/settings',   require('./routes/settings'));
 router.use('/workouts',   require('./routes/workouts'));
 router.use('/sse',        require('./routes/sse'));
+router.use('/referrals',  require('./routes/referrals'));
 router.use('/errors',     require('./routes/errors'));
 
 module.exports = router;

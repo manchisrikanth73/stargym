@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  ScrollView, ActivityIndicator, Platform, Switch, Image,
+  ScrollView, ActivityIndicator, Platform, Switch, Image, Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
@@ -10,6 +10,7 @@ import { auth } from '../services/firebase';
 import { logOut } from '../services/auth';
 import { getUserProfile, updateUserProfile } from '../services/users';
 import { uploadProfilePhoto } from '../services/storage';
+import { submitReferral } from '../services/referrals';
 import {
   getMembershipPrices, setMembershipPrices, MembershipPrices,
   getWorkoutAccess, setWorkoutAccess, WorkoutAccess,
@@ -43,6 +44,13 @@ export default function SettingsScreen() {
   const [photoURL, setPhotoURL]                         = useState<string | null>(null);
   const [uploading, setUploading]                       = useState(false);
   const [isActive, setIsActive]                         = useState(false);
+
+  const [referModal, setReferModal]       = useState(false);
+  const [refereeName, setRefereeName]     = useState('');
+  const [refereeEmail, setRefereeEmail]   = useState('');
+  const [refereePhone, setRefereePhone]   = useState('');
+  const [referSubmitting, setReferSubmitting] = useState(false);
+  const [referSuccess, setReferSuccess]   = useState(false);
   const [activationStartDate, setActivationStartDate]   = useState<string | null>(null);
   const [activationEndDate, setActivationEndDate]       = useState<string | null>(null);
   const [joinedAt, setJoinedAt]                         = useState<string | null>(null);
@@ -171,6 +179,30 @@ export default function SettingsScreen() {
       }
     };
     input.click();
+  };
+
+  const handleSubmitReferral = async () => {
+    if (!refereeName.trim() || !refereeEmail.trim()) {
+      notify('Missing fields', 'Name and email are required.');
+      return;
+    }
+    setReferSubmitting(true);
+    try {
+      await submitReferral({
+        referrerName: [firstName, lastName].filter(Boolean).join(' ') || user.email || '',
+        referrerEmail: email || user.email || '',
+        refereeName: refereeName.trim(),
+        refereeEmail: refereeEmail.trim(),
+        refereePhone: refereePhone.trim(),
+      });
+      setReferSuccess(true);
+      setRefereeName(''); setRefereeEmail(''); setRefereePhone('');
+      setTimeout(() => { setReferSuccess(false); setReferModal(false); }, 2000);
+    } catch (err: any) {
+      notify('Error', err.message ?? 'Failed to submit referral.');
+    } finally {
+      setReferSubmitting(false);
+    }
   };
 
   const toggleSub = (section: Exclude<SubSection, null>) =>
@@ -479,7 +511,7 @@ export default function SettingsScreen() {
 
             <View style={styles.menuDivider} />
 
-            <TouchableOpacity style={styles.menuRow} onPress={() => notify('Refer a Friend', 'Coming soon.')}>
+            <TouchableOpacity style={styles.menuRow} onPress={() => setReferModal(true)}>
               <View style={styles.menuIconWrap}>
                 <Ionicons name="gift-outline" size={22} color={colors.textMuted} />
               </View>
@@ -512,6 +544,67 @@ export default function SettingsScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       )}
+
+      {/* Refer a Friend Modal */}
+      <Modal visible={referModal} transparent animationType="slide" onRequestClose={() => setReferModal(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setReferModal(false)}>
+          <TouchableOpacity style={styles.modalCard} activeOpacity={1} onPress={() => {}}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Refer a Friend</Text>
+              <TouchableOpacity onPress={() => setReferModal(false)}>
+                <Ionicons name="close" size={22} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalSub}>Know someone who'd love to join? Enter their details below.</Text>
+
+            <View style={styles.modalForm}>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Full Name"
+                placeholderTextColor={colors.textDim}
+                value={refereeName}
+                onChangeText={setRefereeName}
+                autoCapitalize="words"
+              />
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Email Address"
+                placeholderTextColor={colors.textDim}
+                value={refereeEmail}
+                onChangeText={setRefereeEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Phone Number"
+                placeholderTextColor={colors.textDim}
+                value={refereePhone}
+                onChangeText={setRefereePhone}
+                keyboardType="phone-pad"
+              />
+            </View>
+
+            {referSuccess && (
+              <View style={styles.successBox}>
+                <Ionicons name="checkmark-circle-outline" size={16} color={colors.success} />
+                <Text style={styles.successText}>Referral submitted successfully!</Text>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={[styles.saveBtn, referSubmitting && styles.saveBtnDisabled]}
+              onPress={handleSubmitReferral}
+              disabled={referSubmitting}
+            >
+              {referSubmitting
+                ? <ActivityIndicator color="#000" size="small" />
+                : <Text style={styles.saveBtnText}>Submit Referral</Text>
+              }
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -693,4 +786,28 @@ const styles = StyleSheet.create({
   },
   saveBtnDisabled: { opacity: 0.5 },
   saveBtnText: { color: '#000', fontSize: 15, fontWeight: '700' },
+
+  /* Refer a Friend Modal */
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: 24, paddingBottom: 48,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)',
+  },
+  modalHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8,
+  },
+  modalTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
+  modalSub: { color: colors.textMuted, fontSize: 13, marginBottom: 20, lineHeight: 19 },
+  modalForm: { gap: 12, marginBottom: 20 },
+  modalInput: {
+    backgroundColor: colors.bg, borderRadius: 12,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 14, paddingVertical: 14,
+    color: colors.text, fontSize: 15,
+  },
 });
