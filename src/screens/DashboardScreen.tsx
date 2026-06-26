@@ -153,9 +153,11 @@ export default function DashboardScreen() {
         <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())}>
           <Ionicons name="menu" size={28} color={colors.text} />
         </TouchableOpacity>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{displayName[0].toUpperCase()}</Text>
-        </View>
+        {!isAdmin && (
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{displayName[0].toUpperCase()}</Text>
+          </View>
+        )}
       </View>
 
       {/* Expired / pending banner */}
