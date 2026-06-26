@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  ScrollView, ActivityIndicator, Platform, Switch,
+  ScrollView, ActivityIndicator, Platform, Switch, Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
@@ -9,6 +9,7 @@ import { updateProfile } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import { logOut } from '../services/auth';
 import { getUserProfile, updateUserProfile } from '../services/users';
+import { uploadProfilePhoto } from '../services/storage';
 import {
   getMembershipPrices, setMembershipPrices, MembershipPrices,
   getWorkoutAccess, setWorkoutAccess, WorkoutAccess,
@@ -39,6 +40,8 @@ export default function SettingsScreen() {
   const [gender, setGender]       = useState('');
   const [weightKg, setWeightKg]   = useState('');
   const [membershipType, setMembershipType]             = useState('');
+  const [photoURL, setPhotoURL]                         = useState<string | null>(null);
+  const [uploading, setUploading]                       = useState(false);
   const [isActive, setIsActive]                         = useState(false);
   const [activationStartDate, setActivationStartDate]   = useState<string | null>(null);
   const [activationEndDate, setActivationEndDate]       = useState<string | null>(null);
@@ -71,6 +74,7 @@ export default function SettingsScreen() {
       setGender(profile?.gender ?? '');
       setWeightKg(profile?.weightKg != null ? String(profile.weightKg) : '');
       setMembershipType(profile?.membershipType ?? '');
+      setPhotoURL(profile?.photoURL ?? user.photoURL ?? null);
       setIsActive(profile?.isActive ?? false);
       setActivationStartDate(profile?.activationStartDate ?? null);
       setActivationEndDate(profile?.activationEndDate ?? null);
@@ -146,6 +150,29 @@ export default function SettingsScreen() {
     }
   };
 
+  const handlePickPhoto = () => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      setUploading(true);
+      try {
+        const url = await uploadProfilePhoto(user.uid, file);
+        await updateProfile(user, { photoURL: url });
+        await updateUserProfile(user.uid, { photoURL: url });
+        setPhotoURL(url);
+      } catch (err: any) {
+        notify('Upload failed', err.message ?? 'Could not upload photo.');
+      } finally {
+        setUploading(false);
+      }
+    };
+    input.click();
+  };
+
   const toggleSub = (section: Exclude<SubSection, null>) =>
     setActiveSubSection(prev => prev === section ? null : section);
 
@@ -178,13 +205,25 @@ export default function SettingsScreen() {
           <ActivityIndicator color={colors.primary} style={{ marginVertical: 32 }} />
         ) : (
           <>
-            <View style={styles.avatarRing}>
-              <View style={styles.avatarCircle}>
-                <Text style={styles.avatarInitial}>
-                  {firstName ? firstName[0].toUpperCase() : '?'}
-                </Text>
+            <TouchableOpacity style={styles.avatarContainer} onPress={handlePickPhoto} activeOpacity={0.8}>
+              <View style={styles.avatarRing}>
+                {photoURL ? (
+                  <Image source={{ uri: photoURL }} style={styles.avatarImage} />
+                ) : (
+                  <View style={styles.avatarCircle}>
+                    <Text style={styles.avatarInitial}>
+                      {firstName ? firstName[0].toUpperCase() : '?'}
+                    </Text>
+                  </View>
+                )}
               </View>
-            </View>
+              <View style={styles.cameraOverlay}>
+                {uploading
+                  ? <ActivityIndicator size="small" color="#000" />
+                  : <Ionicons name="camera" size={12} color="#000" />
+                }
+              </View>
+            </TouchableOpacity>
             <Text style={styles.heroName}>
               {[firstName, lastName].filter(Boolean).join(' ') || 'Your Name'}
             </Text>
@@ -529,17 +568,26 @@ const styles = StyleSheet.create({
   },
   heroNavBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   heroTitle: { color: colors.text, fontSize: 17, fontWeight: '700' },
+  avatarContainer: { position: 'relative', marginBottom: 12 },
   avatarRing: {
     width: 80, height: 80, borderRadius: 40,
     borderWidth: 2, borderColor: colors.primary,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+    alignItems: 'center', justifyContent: 'center',
   },
+  avatarImage: { width: 76, height: 76, borderRadius: 38 },
   avatarCircle: {
     width: 72, height: 72, borderRadius: 36,
     backgroundColor: `${colors.primary}22`,
     alignItems: 'center', justifyContent: 'center',
   },
   avatarInitial: { color: colors.primary, fontSize: 28, fontWeight: '800' },
+  cameraOverlay: {
+    position: 'absolute', bottom: 0, right: 0,
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: colors.surface,
+  },
   heroName: { color: colors.text, fontSize: 18, fontWeight: '700', marginBottom: 10 },
   heroBadge: {
     backgroundColor: `${colors.primary}20`, borderRadius: 20,

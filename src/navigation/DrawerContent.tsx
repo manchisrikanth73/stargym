@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
+  Image,
 } from 'react-native';
 import { DrawerContentScrollView, DrawerContentComponentProps } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,11 +26,15 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
   const name = user?.displayName ?? user?.email?.split('@')[0] ?? 'Athlete';
   const email = user?.email ?? '';
   const [isAdmin, setIsAdmin] = useState(false);
+  const [photoURL, setPhotoURL] = useState<string | null>(user?.photoURL ?? null);
 
   useEffect(() => {
     if (user?.uid) {
       getUserProfile(user.uid)
-        .then(p => setIsAdmin(p?.role === 'admin'))
+        .then(p => {
+          setIsAdmin(p?.role === 'admin');
+          setPhotoURL(p?.photoURL ?? user?.photoURL ?? null);
+        })
         .catch(() => setIsAdmin(false));
     }
   }, [user?.uid]);
@@ -46,7 +51,10 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
         {/* Profile header */}
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{name[0].toUpperCase()}</Text>
+            {photoURL
+              ? <Image source={{ uri: photoURL }} style={styles.avatarImage} />
+              : <Text style={styles.avatarText}>{name[0].toUpperCase()}</Text>
+            }
           </View>
           <Text style={styles.name}>{name}</Text>
           <Text style={styles.email}>{email}</Text>
@@ -110,6 +118,7 @@ const styles = StyleSheet.create({
     backgroundColor: `${colors.primary}33`,
     alignItems: 'center', justifyContent: 'center', marginBottom: 12,
   },
+  avatarImage: { width: 60, height: 60, borderRadius: 30 },
   avatarText: { color: colors.primary, fontSize: 24, fontWeight: '700' },
   name: { color: colors.text, fontSize: 18, fontWeight: '700' },
   email: { color: colors.textMuted, fontSize: 13, marginTop: 2 },

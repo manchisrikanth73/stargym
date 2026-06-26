@@ -19,6 +19,7 @@ export interface UserProfile {
   weightKg: number | null;
   scheduledDeleteAt: string | null;
   promoWorkoutExpiry: string | null;
+  photoURL: string | null;
 }
 
 export async function createUserProfile(
@@ -31,7 +32,7 @@ export async function createUserProfile(
 ): Promise<void> {
   const res = await apiFetch('/auth/profile', {
     method: 'POST',
-    body: JSON.stringify({ uid, email, displayName, age, gender, weightKg }),
+    body: JSON.stringify({ uid, email, displayName, age, gender, weightKg, photoURL: null }),
   });
   if (!res.ok) throw new Error(await res.text());
 }
