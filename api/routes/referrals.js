@@ -20,7 +20,11 @@ router.post('/', requireAuth, async (req, res) => {
     if (!refereeName || !refereeEmail) {
       return res.status(400).json({ error: 'refereeName and refereeEmail are required' });
     }
-    await db().collection('referrals').add({
+    const now = admin.FieldValue.serverTimestamp();
+    const batch = db().batch();
+
+    // Admin referral record (existing inbox)
+    batch.set(db().collection('referrals').doc(), {
       referrerUid: req.uid,
       referrerName: referrerName ?? '',
       referrerEmail: referrerEmail ?? '',
@@ -28,8 +32,21 @@ router.post('/', requireAuth, async (req, res) => {
       refereeEmail,
       refereePhone,
       read: false,
-      createdAt: admin.FieldValue.serverTimestamp(),
+      createdAt: now,
     });
+
+    // Member confirmation notification
+    batch.set(db().collection('notifications').doc(), {
+      recipientUid: req.uid,
+      type: 'referral_sent',
+      refereeName,
+      refereeEmail,
+      refereePhone,
+      read: false,
+      createdAt: now,
+    });
+
+    await batch.commit();
     res.status(201).json({});
   } catch (err) {
     res.status(500).json({ error: err.message });

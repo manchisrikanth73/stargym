@@ -42,3 +42,24 @@ export async function markReferralRead(id: string): Promise<void> {
 export function subscribeReferralUnreadCount(cb: (count: number) => void): () => void {
   return apiSSE('/sse/referrals-unread', data => cb((data as any).count ?? 0));
 }
+
+export interface MemberNotification {
+  id: string;
+  type: 'referral_sent';
+  refereeName: string;
+  refereeEmail: string;
+  refereePhone: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export async function getMemberNotifications(): Promise<MemberNotification[]> {
+  const res = await apiFetch('/notifications/mine');
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function markNotificationRead(id: string): Promise<void> {
+  const res = await apiFetch(`/notifications/${id}/read`, { method: 'PATCH' });
+  if (!res.ok) throw new Error(await res.text());
+}

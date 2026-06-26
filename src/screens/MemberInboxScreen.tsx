@@ -1,14 +1,14 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, DrawerActions, useFocusEffect } from '@react-navigation/native';
-import { getReferrals, markReferralRead, ReferralRecord } from '../services/referrals';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { getMemberNotifications, markNotificationRead, MemberNotification } from '../services/referrals';
 import { colors } from '../theme/colors';
 import dayjs from 'dayjs';
 
-export default function InboxScreen() {
+export default function MemberInboxScreen() {
   const navigation = useNavigation<any>();
-  const [referrals, setReferrals] = useState<ReferralRecord[]>([]);
+  const [notifications, setNotifications] = useState<MemberNotification[]>([]);
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(
@@ -16,8 +16,8 @@ export default function InboxScreen() {
       (async () => {
         setLoading(true);
         try {
-          const data = await getReferrals();
-          setReferrals(data);
+          const data = await getMemberNotifications();
+          setNotifications(data);
         } catch {
           // silently ignore
         } finally {
@@ -29,20 +29,20 @@ export default function InboxScreen() {
 
   const handleMarkRead = async (id: string) => {
     try {
-      await markReferralRead(id);
-      setReferrals(prev => prev.map(r => r.id === id ? { ...r, read: true } : r));
+      await markNotificationRead(id);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
     } catch {
       // silently ignore
     }
   };
 
-  const unreadCount = referrals.filter(r => !r.read).length;
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())}>
-          <Ionicons name="menu" size={28} color={colors.text} />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.titleRow}>
           <Text style={styles.heading}>Inbox</Text>
@@ -52,66 +52,63 @@ export default function InboxScreen() {
             </View>
           )}
         </View>
-        <View style={{ width: 28 }} />
+        <View style={{ width: 40 }} />
       </View>
 
       {loading ? (
         <ActivityIndicator color={colors.primary} style={{ marginTop: 60 }} />
-      ) : referrals.length === 0 ? (
+      ) : notifications.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="mail-open-outline" size={52} color={colors.textDim} />
-          <Text style={styles.emptyText}>No referrals yet</Text>
-          <Text style={styles.emptySub}>Member referrals will appear here</Text>
+          <Text style={styles.emptyText}>No messages yet</Text>
+          <Text style={styles.emptySub}>Referral confirmations will appear here</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
-          {referrals.map(r => (
+          {notifications.map(n => (
             <TouchableOpacity
-              key={r.id}
-              style={[styles.card, !r.read && styles.cardUnread]}
-              onPress={() => !r.read && handleMarkRead(r.id)}
-              activeOpacity={r.read ? 1 : 0.75}
+              key={n.id}
+              style={[styles.card, !n.read && styles.cardUnread]}
+              onPress={() => !n.read && handleMarkRead(n.id)}
+              activeOpacity={n.read ? 1 : 0.75}
             >
-              {!r.read && <View style={styles.unreadDot} />}
+              {!n.read && <View style={styles.unreadDot} />}
 
               <View style={styles.iconRow}>
                 <View style={styles.iconWrap}>
-                  <Ionicons name="person-add" size={20} color={colors.primary} />
+                  <Ionicons name="gift" size={20} color={colors.secondary} />
                 </View>
                 <Text style={styles.cardTitle}>
-                  {r.refereeName} referred by {r.referrerName}
+                  You successfully referred {n.refereeName}!
                 </Text>
               </View>
 
-              <Text style={styles.cardSub}>Below are the details</Text>
+              <Text style={styles.cardSub}>
+                Your referral has been sent to the gym. Below are the details you submitted.
+              </Text>
 
               <View style={styles.detailsBox}>
                 <View style={styles.detailRow}>
                   <Ionicons name="person-outline" size={14} color={colors.textMuted} />
-                  <Text style={styles.detailText}>{r.refereeName}</Text>
+                  <Text style={styles.detailText}>{n.refereeName}</Text>
                 </View>
                 <View style={styles.detailRow}>
                   <Ionicons name="mail-outline" size={14} color={colors.textMuted} />
-                  <Text style={styles.detailText}>{r.refereeEmail}</Text>
+                  <Text style={styles.detailText}>{n.refereeEmail}</Text>
                 </View>
-                {!!r.refereePhone && (
+                {!!n.refereePhone && (
                   <View style={styles.detailRow}>
                     <Ionicons name="call-outline" size={14} color={colors.textMuted} />
-                    <Text style={styles.detailText}>{r.refereePhone}</Text>
+                    <Text style={styles.detailText}>{n.refereePhone}</Text>
                   </View>
                 )}
-                <View style={styles.cardDivider} />
-                <View style={styles.detailRow}>
-                  <Ionicons name="person-circle-outline" size={14} color={colors.textMuted} />
-                  <Text style={styles.detailText}>{r.referrerName} · {r.referrerEmail}</Text>
-                </View>
               </View>
 
               <Text style={styles.timestamp}>
-                {dayjs(r.createdAt).format('DD MMM YYYY · hh:mm A')}
+                {dayjs(n.createdAt).format('DD MMM YYYY · hh:mm A')}
               </Text>
 
-              {r.read && (
+              {n.read && (
                 <View style={styles.readChip}>
                   <Ionicons name="checkmark-done" size={12} color={colors.textDim} />
                   <Text style={styles.readChipText}>Read</Text>
@@ -130,14 +127,14 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingTop: 54, paddingBottom: 14,
+    paddingHorizontal: 16, paddingTop: 54, paddingBottom: 14,
   },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   heading: { color: colors.text, fontSize: 20, fontWeight: '800' },
   headerBadge: {
     backgroundColor: colors.primary, borderRadius: 10,
-    minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 5,
+    minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5,
   },
   headerBadgeText: { color: '#000', fontSize: 11, fontWeight: '800' },
 
@@ -149,20 +146,21 @@ const styles = StyleSheet.create({
     padding: 16, marginBottom: 12, position: 'relative',
   },
   cardUnread: {
-    borderColor: `${colors.primary}44`,
-    backgroundColor: `${colors.primary}08`,
+    borderColor: `${colors.secondary}44`,
+    backgroundColor: `${colors.secondary}08`,
   },
   unreadDot: {
     position: 'absolute', top: 16, right: 16,
     width: 8, height: 8, borderRadius: 4,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.secondary,
   },
 
   iconRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 8 },
   iconWrap: {
     width: 36, height: 36, borderRadius: 10,
-    backgroundColor: `${colors.primary}18`,
-    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    backgroundColor: `${colors.secondary}18`,
+    alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
   },
   cardTitle: { flex: 1, color: colors.text, fontSize: 15, fontWeight: '700', lineHeight: 20, paddingTop: 8 },
   cardSub: { color: colors.textMuted, fontSize: 13, lineHeight: 18, marginBottom: 12 },
@@ -174,9 +172,7 @@ const styles = StyleSheet.create({
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   detailText: { color: colors.text, fontSize: 14 },
 
-  cardDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginVertical: 4 },
-
-  timestamp: { color: colors.textDim, fontSize: 11, marginTop: 4 },
+  timestamp: { color: colors.textDim, fontSize: 11 },
   readChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     marginTop: 10, alignSelf: 'flex-start',

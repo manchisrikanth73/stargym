@@ -501,7 +501,7 @@ export default function SettingsScreen() {
           {/* ── Other rows ── */}
           <View style={[styles.menuCard, { marginTop: 12 }]}>
 
-            <TouchableOpacity style={styles.menuRow} onPress={() => notify('Inbox', 'Coming soon.')}>
+            <TouchableOpacity style={styles.menuRow} onPress={() => navigation.navigate('MemberInbox' as never)}>
               <View style={styles.menuIconWrap}>
                 <Ionicons name="mail-outline" size={22} color={colors.textMuted} />
               </View>

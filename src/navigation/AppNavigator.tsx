@@ -12,6 +12,7 @@ import ExerciseLibraryScreen from '../screens/ExerciseLibraryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import ProgressScreen from '../screens/ProgressScreen';
 import InboxScreen from '../screens/InboxScreen';
+import MemberInboxScreen from '../screens/MemberInboxScreen';
 import DrawerContent from './DrawerContent';
 
 import { colors } from '../theme/colors';
@@ -48,6 +49,7 @@ export default function AppNavigator() {
       <Stack.Screen name="AdminUserDetail" component={AdminUserDetailScreen} />
       <Stack.Screen name="WorkoutLog" component={WorkoutLogScreen} />
       <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} />
+      <Stack.Screen name="MemberInbox" component={MemberInboxScreen} />
     </Stack.Navigator>
   );
 }
