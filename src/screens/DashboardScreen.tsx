@@ -284,12 +284,6 @@ export default function DashboardScreen() {
         <>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.actionsRow}>
-            <ActionButton
-              icon="calendar-month"
-              label="Attendance"
-              color={colors.primary}
-              onPress={() => navigation.navigate('Calendar')}
-            />
             <ActionButton icon="bar-chart" label="Progress" color="#9B59B6" onPress={() => navigation.navigate('Progress' as never)} />
             <ActionButton
               icon="barbell"

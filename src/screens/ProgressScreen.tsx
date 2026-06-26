@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { Calendar, DateData } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -12,6 +13,8 @@ import { calcExerciseCalories } from '../utils/calories';
 import { colors } from '../theme/colors';
 import dayjs from 'dayjs';
 
+type MarkedDates = Record<string, { selected?: boolean; selectedColor?: string }>;
+
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const GOAL = 20;
 
@@ -22,6 +25,9 @@ export default function ProgressScreen() {
   const [monthly, setMonthly] = useState<{ label: string; count: number }[]>([]);
   const [thisWeekDates, setThisWeekDates] = useState<string[]>([]);
   const [weekCalories, setWeekCalories] = useState<{ date: string; kcal: number }[]>([]);
+  const [markedDates, setMarkedDates] = useState<MarkedDates>({});
+  const [currentMonth, setCurrentMonth] = useState(dayjs().format('YYYY-MM'));
+  const [calMonthCount, setCalMonthCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -40,6 +46,16 @@ export default function ProgressScreen() {
             uid ? getUserProfile(uid).catch(() => null) : Promise.resolve(null),
           ]);
           setThisMonth(current);
+
+          const marks: MarkedDates = {};
+          allDates.forEach(d => {
+            marks[d] = { selected: true, selectedColor: colors.secondary };
+          });
+          setMarkedDates(marks);
+          const thisMonthKey = dayjs().format('YYYY-MM');
+          setCurrentMonth(thisMonthKey);
+          setCalMonthCount(allDates.filter(d => d.startsWith(thisMonthKey)).length);
+
           const bodyWeight = profile?.weightKg ?? 70;
           const weekStart = dayjs().startOf('week').format('YYYY-MM-DD');
           const today = dayjs().format('YYYY-MM-DD');
@@ -78,6 +94,12 @@ export default function ProgressScreen() {
       })();
     }, [])
   );
+
+  const handleMonthChange = (month: DateData) => {
+    const key = `${month.year}-${String(month.month).padStart(2, '0')}`;
+    setCurrentMonth(key);
+    setCalMonthCount(Object.keys(markedDates).filter(d => d.startsWith(key)).length);
+  };
 
   const pct = Math.min(thisMonth / GOAL, 1);
   const maxCount = Math.max(...monthly.map(m => m.count), 1);
@@ -120,6 +142,44 @@ export default function ProgressScreen() {
                   <Text style={styles.barLabel}>{m.label}</Text>
                 </View>
               ))}
+            </View>
+          </View>
+
+          {/* Attendance Calendar */}
+          <View style={styles.card}>
+            <View style={styles.calHeader}>
+              <Text style={styles.cardLabel}>Attendance Calendar</Text>
+              <Text style={styles.calMonthCount}>{calMonthCount} sessions · {dayjs(currentMonth).format('MMM YYYY')}</Text>
+            </View>
+            <Calendar
+              markedDates={markedDates}
+              onMonthChange={handleMonthChange}
+              theme={{
+                backgroundColor: 'transparent',
+                calendarBackground: 'transparent',
+                textSectionTitleColor: colors.textMuted,
+                selectedDayBackgroundColor: colors.secondary,
+                selectedDayTextColor: '#000',
+                todayTextColor: colors.primary,
+                dayTextColor: colors.text,
+                textDisabledColor: colors.textDim,
+                monthTextColor: colors.text,
+                arrowColor: colors.text,
+                textMonthFontWeight: '700',
+                textDayFontSize: 13,
+                textMonthFontSize: 15,
+              }}
+              style={styles.calendar}
+            />
+            <View style={styles.legend}>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: colors.secondary }]} />
+                <Text style={styles.legendLabel}>Present</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.textDim }]} />
+                <Text style={styles.legendLabel}>Absent</Text>
+              </View>
             </View>
           </View>
 
@@ -194,6 +254,13 @@ const styles = StyleSheet.create({
   barBg: { width: '100%', flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden', justifyContent: 'flex-end' },
   barFill: { width: '100%', backgroundColor: `${colors.primary}99`, borderRadius: 4 },
   barLabel: { color: colors.textMuted, fontSize: 9, fontWeight: '600' },
+  calHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  calMonthCount: { color: colors.primary, fontSize: 12, fontWeight: '700' },
+  calendar: { marginHorizontal: -4 },
+  legend: { flexDirection: 'row', gap: 20, marginTop: 12 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendDot: { width: 12, height: 12, borderRadius: 6 },
+  legendLabel: { color: colors.textMuted, fontSize: 11 },
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
   dateRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
   dateText: { flex: 1, color: colors.text, fontSize: 14 },
