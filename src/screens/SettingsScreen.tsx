@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  ScrollView, ActivityIndicator, Platform, Switch, Image, Modal,
+  ScrollView, ActivityIndicator, Platform, Image, Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
@@ -11,18 +11,9 @@ import { logOut } from '../services/auth';
 import { getUserProfile, updateUserProfile } from '../services/users';
 import { uploadProfilePhoto } from '../services/storage';
 import { submitReferral } from '../services/referrals';
-import {
-  getMembershipPrices, setMembershipPrices, MembershipPrices,
-  getWorkoutAccess, setWorkoutAccess, WorkoutAccess,
-} from '../services/gymSettings';
+import { getMembershipPrices, MembershipPrices } from '../services/gymSettings';
 import { colors } from '../theme/colors';
 import dayjs from 'dayjs';
-
-const MEMBERSHIP_OPTIONS: { key: keyof MembershipPrices; label: string; color: string }[] = [
-  { key: 'basic',   label: 'Basic',   color: colors.primary },
-  { key: 'premium', label: 'Premium', color: '#9B59B6' },
-  { key: 'vip',     label: 'VIP',     color: '#FFD700' },
-];
 
 type SubSection = 'personal' | 'membership' | 'billing' | null;
 
@@ -58,15 +49,9 @@ export default function SettingsScreen() {
   const [saving, setSaving]     = useState(false);
   const [success, setSuccess]   = useState(false);
 
-  const [prices, setPrices]         = useState<MembershipPrices>({ basic: 0, premium: 0, vip: 0 });
-  const [pricesDraft, setPricesDraft] = useState<MembershipPrices>({ basic: 0, premium: 0, vip: 0 });
-  const [editingPrices, setEditingPrices] = useState(false);
-  const [savingPrices, setSavingPrices]   = useState(false);
+  const [prices, setPrices] = useState<MembershipPrices>({ basic: 0, premium: 0, vip: 0 });
 
-  const [workoutAccess, setWorkoutAccessState] = useState<WorkoutAccess>({ basic: false, premium: true, vip: true });
-  const [savingAccess, setSavingAccess]         = useState(false);
-
-  const [infoExpanded, setInfoExpanded]         = useState(true);
+  const [infoExpanded, setInfoExpanded] = useState(true);
   const [activeSubSection, setActiveSubSection] = useState<SubSection>(null);
 
   useEffect(() => {
@@ -89,16 +74,9 @@ export default function SettingsScreen() {
       setJoinedAt(profile?.joinedAt ?? null);
       setOriginal({ firstName: fn, lastName: ln, email: em, phone: ph });
 
-      const admin = profile?.role === 'admin';
-      setIsAdmin(admin);
-
+      setIsAdmin(profile?.role === 'admin');
       const p = await getMembershipPrices();
       setPrices(p);
-      setPricesDraft(p);
-      if (admin) {
-        const wa = await getWorkoutAccess();
-        setWorkoutAccessState(wa);
-      }
       setLoading(false);
     })();
   }, []);
@@ -128,33 +106,6 @@ export default function SettingsScreen() {
       notify('Error', err.message ?? 'Failed to save. Please try again.');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleSavePrices = async () => {
-    setSavingPrices(true);
-    try {
-      await setMembershipPrices(pricesDraft);
-      setPrices(pricesDraft);
-      setEditingPrices(false);
-    } catch (err: any) {
-      notify('Error', err.message ?? 'Failed to save prices.');
-    } finally {
-      setSavingPrices(false);
-    }
-  };
-
-  const handleToggleAccess = async (key: keyof WorkoutAccess, value: boolean) => {
-    const updated = { ...workoutAccess, [key]: value };
-    setWorkoutAccessState(updated);
-    setSavingAccess(true);
-    try {
-      await setWorkoutAccess(updated);
-    } catch (err: any) {
-      notify('Error', err.message ?? 'Failed to save.');
-      setWorkoutAccessState(workoutAccess);
-    } finally {
-      setSavingAccess(false);
     }
   };
 
@@ -357,86 +308,14 @@ export default function SettingsScreen() {
                 {activeSubSection === 'membership' && (
                   <View style={styles.subContent}>
                     {isAdmin ? (
-                      <>
-                        <View style={styles.subFormCard}>
-                          <View style={[styles.gridRow, styles.gridHeaderRow]}>
-                            <Text style={[styles.colHeader, styles.col1]}>Plan</Text>
-                            <View style={[styles.col2, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
-                              <Text style={styles.colHeader}>Price</Text>
-                            </View>
-                            <View style={[styles.col3, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }]}>
-                              <Text style={styles.colHeader}>Workout</Text>
-                              {savingAccess && <ActivityIndicator size="small" color={colors.primary} />}
-                            </View>
-                          </View>
-                          {MEMBERSHIP_OPTIONS.map(({ key, label, color }, i) => (
-                            <React.Fragment key={key}>
-                              {i > 0 && <View style={styles.fieldDivider} />}
-                              <View style={styles.gridRow}>
-                                <View style={[styles.col1, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
-                                  <View style={[styles.membershipDot, { backgroundColor: `${color}22` }]}>
-                                    <Text style={[styles.membershipDotText, { color }]}>{label[0]}</Text>
-                                  </View>
-                                  <Text style={styles.planName}>{label}</Text>
-                                </View>
-                                <View style={[styles.col2, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
-                                  {editingPrices ? (
-                                    <View style={styles.priceInputWrap}>
-                                      <Text style={styles.currencySymbol}>$</Text>
-                                      <TextInput
-                                        style={styles.priceInput}
-                                        value={pricesDraft[key] === 0 ? '' : String(pricesDraft[key])}
-                                        onChangeText={v => {
-                                          const n = parseFloat(v);
-                                          setPricesDraft(p => ({ ...p, [key]: isNaN(n) ? 0 : n }));
-                                        }}
-                                        keyboardType="decimal-pad"
-                                        placeholder="0"
-                                        placeholderTextColor={colors.textDim}
-                                      />
-                                    </View>
-                                  ) : (
-                                    <>
-                                      <Text style={styles.priceValue}>
-                                        {prices[key] > 0 ? `$${prices[key]}` : '—'}
-                                      </Text>
-                                      <TouchableOpacity onPress={() => setEditingPrices(true)}>
-                                        <Text style={styles.editLink}>Edit</Text>
-                                      </TouchableOpacity>
-                                    </>
-                                  )}
-                                </View>
-                                <View style={[styles.col3, { alignItems: 'center' }]}>
-                                  <Switch
-                                    value={workoutAccess[key]}
-                                    onValueChange={v => handleToggleAccess(key, v)}
-                                    trackColor={{ true: color, false: '#333' }}
-                                    thumbColor="#fff"
-                                    disabled={savingAccess}
-                                  />
-                                </View>
-                              </View>
-                            </React.Fragment>
-                          ))}
-                        </View>
-                        {editingPrices && (
-                          <View style={styles.subActions}>
-                            <TouchableOpacity
-                              style={styles.cancelBtn}
-                              onPress={() => { setPricesDraft(prices); setEditingPrices(false); }}
-                              disabled={savingPrices}
-                            >
-                              <Text style={styles.cancelBtnText}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              style={[styles.saveBtn, savingPrices && styles.saveBtnDisabled]}
-                              onPress={handleSavePrices} disabled={savingPrices}
-                            >
-                              {savingPrices ? <ActivityIndicator color="#000" size="small" /> : <Text style={styles.saveBtnText}>Save Prices</Text>}
-                            </TouchableOpacity>
-                          </View>
-                        )}
-                      </>
+                      <TouchableOpacity
+                        style={styles.billingLink}
+                        onPress={() => navigation.navigate('Billing' as never)}
+                      >
+                        <Ionicons name="card-outline" size={18} color={colors.primary} />
+                        <Text style={styles.billingLinkText}>Manage plans in Billing</Text>
+                        <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+                      </TouchableOpacity>
                     ) : (
                       <View style={styles.subFormCard}>
                         <InfoRow label="Plan" value={memberTypeCap || '—'} />
@@ -743,26 +622,13 @@ const styles = StyleSheet.create({
   fieldValue: { flex: 1, color: colors.text, fontSize: 15, fontWeight: '500' },
   fieldDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginLeft: 14 },
 
-  /* Membership pricing grid */
-  colHeader: { color: colors.textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  gridRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 11 },
-  gridHeaderRow: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)', paddingVertical: 9 },
-  col1: { flex: 2 },
-  col2: { flex: 2 },
-  col3: { flex: 1 },
-  planName: { color: colors.text, fontSize: 14, fontWeight: '600' },
-  membershipDot: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  membershipDotText: { fontSize: 12, fontWeight: '800' },
-  priceValue: { color: colors.text, fontSize: 15, fontWeight: '700' },
-  editLink: { color: colors.primary, fontSize: 13, fontWeight: '700' },
-  priceInputWrap: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.bg, borderRadius: 8,
-    borderWidth: 1, borderColor: colors.border,
-    paddingHorizontal: 8, height: 34, gap: 2, width: 80,
+  billingLink: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: `${colors.primary}12`,
+    borderWidth: 1, borderColor: `${colors.primary}30`,
+    borderRadius: 12, padding: 14, marginBottom: 4,
   },
-  currencySymbol: { color: colors.textMuted, fontSize: 14 },
-  priceInput: { color: colors.text, fontSize: 14, width: 52 },
+  billingLinkText: { flex: 1, color: colors.primary, fontSize: 14, fontWeight: '600' },
 
   /* Success */
   successBox: {

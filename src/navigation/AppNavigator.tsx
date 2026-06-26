@@ -12,6 +12,8 @@ import ExerciseLibraryScreen from '../screens/ExerciseLibraryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import ProgressScreen from '../screens/ProgressScreen';
 import InboxScreen from '../screens/InboxScreen';
+import BillingScreen from '../screens/BillingScreen';
+import PromotionsScreen from '../screens/PromotionsScreen';
 import MemberInboxScreen from '../screens/MemberInboxScreen';
 import DrawerContent from './DrawerContent';
 
@@ -38,6 +40,8 @@ function DrawerNav() {
       <Drawer.Screen name="Settings" component={SettingsScreen} />
       <Drawer.Screen name="Progress" component={ProgressScreen} />
       <Drawer.Screen name="Inbox" component={InboxScreen} />
+      <Drawer.Screen name="Billing" component={BillingScreen} />
+      <Drawer.Screen name="Promotions" component={PromotionsScreen} />
     </Drawer.Navigator>
   );
 }
