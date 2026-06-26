@@ -39,12 +39,24 @@ export default function AdminScreen() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [filtered, setFiltered] = useState<UserProfile[]>([]);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showGymQR, setShowGymQR] = useState(false);
   const [historyUser, setHistoryUser] = useState<UserProfile | null>(null);
   const [history, setHistory] = useState<{ date: string; checkedInAt: any }[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  const applyFilters = useCallback((allUsers: UserProfile[], q: string, sf: 'all' | 'active' | 'inactive') => {
+    let result = allUsers;
+    if (sf === 'active') result = result.filter(u => u.isActive);
+    else if (sf === 'inactive') result = result.filter(u => !u.isActive);
+    if (q) result = result.filter(u =>
+      u.displayName?.toLowerCase().includes(q.toLowerCase()) ||
+      u.email?.toLowerCase().includes(q.toLowerCase())
+    );
+    setFiltered(result);
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -56,12 +68,11 @@ export default function AdminScreen() {
       }
       const active = all.filter(u => !expired.some(e => e.uid === u.uid));
       setUsers(active);
-      const q = search.toLowerCase();
-      setFiltered(q ? active.filter(u => u.displayName?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)) : active);
+      applyFilters(active, search, statusFilter);
     } catch (err: any) {
       (window as any).alert('Failed to load members: ' + err.message);
     }
-  }, [search]);
+  }, [search, statusFilter, applyFilters]);
 
   useFocusEffect(
     useCallback(() => {
@@ -78,11 +89,13 @@ export default function AdminScreen() {
 
   const onSearch = (text: string) => {
     setSearch(text);
-    const q = text.toLowerCase();
-    setFiltered(users.filter(u =>
-      u.displayName?.toLowerCase().includes(q) ||
-      u.email?.toLowerCase().includes(q)
-    ));
+    applyFilters(users, text, statusFilter);
+  };
+
+  const onChipPress = (chip: 'all' | 'active' | 'inactive') => {
+    const next = statusFilter === chip ? 'all' : chip;
+    setStatusFilter(next);
+    applyFilters(users, search, next);
   };
 
   const openHistory = async (user: UserProfile) => {
@@ -122,11 +135,11 @@ export default function AdminScreen() {
         </View>
       </View>
 
-      {/* Stats */}
+      {/* Stats / Filters */}
       <View style={styles.statsRow}>
-        <StatChip label="Total" value={users.length} color={colors.primary} />
-        <StatChip label="Active" value={activeCount} color={colors.success} />
-        <StatChip label="Inactive" value={users.length - activeCount} color={colors.textMuted} />
+        <StatChip label="Total" value={users.length} color={colors.primary} isSelected={statusFilter === 'all'} onPress={() => onChipPress('all')} />
+        <StatChip label="Active" value={activeCount} color={colors.success} isSelected={statusFilter === 'active'} onPress={() => onChipPress('active')} />
+        <StatChip label="Inactive" value={users.length - activeCount} color={colors.textMuted} isSelected={statusFilter === 'inactive'} onPress={() => onChipPress('inactive')} />
       </View>
 
       {/* Search */}
@@ -227,12 +240,17 @@ export default function AdminScreen() {
   );
 }
 
-function StatChip({ label, value, color }: { label: string; value: number; color: string }) {
+function StatChip({ label, value, color, isSelected, onPress }: { label: string; value: number; color: string; isSelected: boolean; onPress: () => void }) {
   return (
-    <View style={[styles.statChip, { borderColor: `${color}44` }]}>
+    <TouchableOpacity
+      style={[styles.statChip, { borderColor: `${color}44`, backgroundColor: isSelected ? `${color}22` : colors.surface }]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
       <Text style={[styles.statValue, { color }]}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
+      <Text style={[styles.statLabel, isSelected && { color, fontWeight: '700' }]}>{label}</Text>
+      {isSelected && <View style={[styles.statActiveBar, { backgroundColor: color }]} />}
+    </TouchableOpacity>
   );
 }
 
@@ -315,10 +333,11 @@ const styles = StyleSheet.create({
   statsRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginBottom: 14 },
   statChip: {
     flex: 1, borderWidth: 1, borderRadius: 12, paddingVertical: 10,
-    alignItems: 'center', backgroundColor: colors.surface,
+    alignItems: 'center', overflow: 'hidden',
   },
   statValue: { fontSize: 22, fontWeight: '900' },
   statLabel: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
+  statActiveBar: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 3 },
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginBottom: 12,
     backgroundColor: colors.surface, borderRadius: 12, paddingHorizontal: 14, height: 46,
