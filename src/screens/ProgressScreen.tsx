@@ -19,7 +19,6 @@ const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov
 const GOAL = 20;
 
 export default function ProgressScreen() {
-  const navigation = useNavigation();
   const [loading, setLoading] = useState(true);
   const [thisMonth, setThisMonth] = useState(0);
   const [monthly, setMonthly] = useState<{ label: string; count: number }[]>([]);
