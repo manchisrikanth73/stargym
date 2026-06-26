@@ -110,9 +110,8 @@ export default function AdminScreen() {
         </TouchableOpacity>
         <Text style={styles.heading}>Members</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.backDashBtn} onPress={() => navigation.navigate('Main', { screen: 'Dashboard' })}>
-            <Ionicons name="home-outline" size={14} color={colors.textMuted} />
-            <Text style={styles.backDashText}>Dashboard</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Dashboard' as never)}>
+            <Ionicons name="home-outline" size={22} color={colors.textMuted} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.addBtn}

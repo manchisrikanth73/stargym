@@ -52,7 +52,9 @@ export default function InboxScreen() {
             </View>
           )}
         </View>
-        <View style={{ width: 28 }} />
+        <TouchableOpacity onPress={() => navigation.navigate('Dashboard' as never)}>
+          <Ionicons name="home-outline" size={22} color={colors.textMuted} />
+        </TouchableOpacity>
       </View>
 
       {loading ? (

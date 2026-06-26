@@ -14,7 +14,9 @@ export default function PromotionsScreen() {
           <Ionicons name="menu" size={28} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.heading}>Promotions</Text>
-        <View style={{ width: 28 }} />
+        <TouchableOpacity onPress={() => navigation.navigate('Dashboard' as never)}>
+          <Ionicons name="home-outline" size={22} color={colors.textMuted} />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.empty}>

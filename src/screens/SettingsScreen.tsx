@@ -181,7 +181,13 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           )}
           <Text style={styles.heroTitle}>My Account</Text>
-          <View style={styles.heroNavBtn} />
+          {isAdmin ? (
+            <TouchableOpacity onPress={() => navigation.navigate('Dashboard' as never)} style={styles.heroNavBtn}>
+              <Ionicons name="home-outline" size={22} color={colors.textMuted} />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.heroNavBtn} />
+          )}
         </View>
 
         {loading ? (
