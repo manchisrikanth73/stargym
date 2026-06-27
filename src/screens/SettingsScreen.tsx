@@ -45,6 +45,7 @@ export default function SettingsScreen() {
   const [activationStartDate, setActivationStartDate]   = useState<string | null>(null);
   const [activationEndDate, setActivationEndDate]       = useState<string | null>(null);
   const [joinedAt, setJoinedAt]                         = useState<string | null>(null);
+  const [memberId, setMemberId]                         = useState<string | null>(null);
   const [original, setOriginal] = useState({ firstName: '', lastName: '', email: '', phone: '' });
   const [saving, setSaving]     = useState(false);
   const [success, setSuccess]   = useState(false);
@@ -73,6 +74,7 @@ export default function SettingsScreen() {
       setActivationStartDate(profile?.activationStartDate ?? null);
       setActivationEndDate(profile?.activationEndDate ?? null);
       setJoinedAt(profile?.joinedAt ?? null);
+      setMemberId(profile?.memberId ?? null);
       setOriginal({ firstName: fn, lastName: ln, email: em, phone: ph });
 
       setIsAdmin(profile?.role === 'admin');
@@ -325,6 +327,12 @@ export default function SettingsScreen() {
                     {activeSubSection === 'membership' && (
                       <View style={styles.subContent}>
                         <View style={styles.subFormCard}>
+                          {memberId && (
+                            <>
+                              <InfoRow label="Member ID" value={memberId} />
+                              <View style={styles.fieldDivider} />
+                            </>
+                          )}
                           <InfoRow label="Plan" value={memberTypeCap || '—'} />
                           <View style={styles.fieldDivider} />
                           <InfoRow label="Status" value={isActive ? 'Active' : 'Inactive'} valueColor={isActive ? colors.success : colors.error} />

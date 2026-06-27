@@ -5,6 +5,7 @@ export type MembershipType = 'basic' | 'premium' | 'vip';
 
 export interface UserProfile {
   uid: string;
+  memberId: string | null;
   email: string;
   displayName: string;
   phone: string;

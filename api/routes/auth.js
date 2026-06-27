@@ -20,14 +20,21 @@ router.post('/profile', requireAuth, async (req, res) => {
   }
   try {
     const ref = db().doc(`users/${uid}`);
+    const counterRef = db().doc('gymConfig/memberCounter');
     const now = admin.FieldValue.serverTimestamp();
     let created = false;
     await db().runTransaction(async tx => {
       const snap = await tx.get(ref);
       if (snap.exists) return;
+      const counterSnap = await tx.get(counterRef);
+      const lastId = counterSnap.exists ? (counterSnap.data().lastId ?? 1000) : 1000;
+      const newId = lastId + 1;
+      const memberId = `SG-${String(newId).padStart(4, '0')}`;
+      tx.set(counterRef, { lastId: newId }, { merge: true });
       created = true;
       tx.set(ref, {
         uid, email, displayName,
+        memberId,
         phone: '',
         role: 'member',
         membershipType: 'basic',

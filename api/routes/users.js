@@ -61,12 +61,21 @@ router.post('/', requireAuth, requireAdmin, async (req, res) => {
             activationStartDate = null, activationEndDate = null,
             isActive = false, age = null, gender = null } = req.body;
     const uid = `manual_${Date.now()}`;
-    await db().doc(`users/${uid}`).set({
-      uid, email, displayName, phone, role: 'member',
-      membershipType, isActive,
-      joinedAt: admin.FieldValue.serverTimestamp(),
-      activationStartDate, activationEndDate,
-      age, gender, scheduledDeleteAt: null, promoWorkoutExpiry: null,
+    const userRef = db().doc(`users/${uid}`);
+    const counterRef = db().doc('gymConfig/memberCounter');
+    await db().runTransaction(async tx => {
+      const counterSnap = await tx.get(counterRef);
+      const lastId = counterSnap.exists ? (counterSnap.data().lastId ?? 1000) : 1000;
+      const newId = lastId + 1;
+      const memberId = `SG-${String(newId).padStart(4, '0')}`;
+      tx.set(counterRef, { lastId: newId }, { merge: true });
+      tx.set(userRef, {
+        uid, email, displayName, phone, role: 'member', memberId,
+        membershipType, isActive,
+        joinedAt: admin.FieldValue.serverTimestamp(),
+        activationStartDate, activationEndDate,
+        age, gender, scheduledDeleteAt: null, promoWorkoutExpiry: null,
+      });
     });
     res.status(201).json({ uid });
   } catch (err) {

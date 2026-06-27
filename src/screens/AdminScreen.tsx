@@ -280,6 +280,9 @@ function MemberCard({ user, onEdit, onHistory }: { user: UserProfile; onEdit: ()
           )}
         </View>
         <Text style={styles.email} numberOfLines={1}>{user.email}</Text>
+        {user.memberId && (
+          <Text style={styles.memberIdText}>{user.memberId}</Text>
+        )}
         <View style={styles.membershipRow}>
           <View style={[styles.membershipBadge, { backgroundColor: `${memberColor}22` }]}>
             <Text style={[styles.membershipText, { color: memberColor }]}>{user.membershipType?.toUpperCase()}</Text>
@@ -365,6 +368,7 @@ const styles = StyleSheet.create({
   inactiveBadge: { backgroundColor: '#33333388', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 1 },
   inactiveBadgeText: { color: colors.textMuted, fontSize: 9, fontWeight: '800' },
   email: { color: colors.textMuted, fontSize: 12 },
+  memberIdText: { color: colors.textDim, fontSize: 11, fontWeight: '600', marginTop: 1 },
   membershipRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
   membershipBadge: { borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
   membershipText: { fontSize: 10, fontWeight: '700' },
