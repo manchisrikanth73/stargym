@@ -15,8 +15,9 @@ import dayjs from 'dayjs';
 import { useMemo } from 'react';
 import { auth } from '../services/firebase';
 import { isCheckedInToday, getMonthlyCount, subscribeRecentCheckins } from '../services/attendance';
-import { getUserProfile, updateUserProfile } from '../services/users';
+import { getUserProfile, updateUserProfile, UserProfile } from '../services/users';
 import { getTodayLog } from '../services/workouts';
+import { getTrainerMembers } from '../services/trainers';
 import { EXERCISES } from '../data/exercises';
 import { calcExerciseCalories } from '../utils/calories';
 import { colors } from '../theme/colors';
@@ -40,6 +41,8 @@ export default function DashboardScreen() {
   const [monthlyCount, setMonthlyCount] = useState(0);
   const [isActive, setIsActive] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isTrainer, setIsTrainer] = useState(false);
+  const [trainerMembers, setTrainerMembers] = useState<UserProfile[]>([]);
   const [showAllCheckins, setShowAllCheckins] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [recentCheckins, setRecentCheckins] = useState<{ name: string; email: string; time: string; checkedInAt: string }[]>([]);
@@ -103,6 +106,11 @@ export default function DashboardScreen() {
     setActivationEndDate(endDate);
     setMembershipType(profile?.membershipType ?? null);
     setIsAdmin(profile?.role === 'admin');
+    const trainer = profile?.role === 'trainer';
+    setIsTrainer(trainer);
+    if (trainer && uid) {
+      getTrainerMembers(uid).then(setTrainerMembers).catch(() => setTrainerMembers([]));
+    }
   }, [user?.uid]);
 
   useFocusEffect(useCallback(() => { loadStats(); }, [loadStats]));
@@ -166,7 +174,7 @@ export default function DashboardScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        {isAdmin ? (
+        {(isAdmin || isTrainer) ? (
           <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())}>
             <Ionicons name="menu" size={28} color={colors.text} />
           </TouchableOpacity>
@@ -178,7 +186,7 @@ export default function DashboardScreen() {
       </View>
 
       {/* Expired / pending banner */}
-      {!isAdmin && isExpired && (
+      {!isAdmin && !isTrainer && isExpired && (
         <View style={[styles.pendingBanner, styles.expiredBanner]}>
           <Ionicons name="alert-circle-outline" size={20} color={colors.error} />
           <View style={{ flex: 1 }}>
@@ -187,7 +195,7 @@ export default function DashboardScreen() {
           </View>
         </View>
       )}
-      {!isAdmin && !isExpired && !isActive && (
+      {!isAdmin && !isTrainer && !isExpired && !isActive && (
         <View style={styles.pendingBanner}>
           <Ionicons name="time-outline" size={20} color={colors.secondary} />
           <View style={{ flex: 1 }}>
@@ -207,7 +215,7 @@ export default function DashboardScreen() {
       </View>
 
       {/* Stats — members see session stats */}
-      {!isAdmin && (
+      {!isAdmin && !isTrainer && (
         <>
           <View style={styles.statsRow}>
             <View style={[styles.statCard, { borderColor: `${colors.primary}44` }]}>
@@ -290,7 +298,7 @@ export default function DashboardScreen() {
       })()}
 
       {/* Check-In Card — members only */}
-      {!isAdmin && (
+      {!isAdmin && !isTrainer && (
         <TouchableOpacity
           style={[styles.checkinCard, checkedIn && styles.checkinCardDone, !isActive && styles.checkinCardDisabled]}
           onPress={() => {
@@ -315,6 +323,45 @@ export default function DashboardScreen() {
         </TouchableOpacity>
       )}
 
+
+      {/* Trainer: assigned members */}
+      {isTrainer && (
+        <>
+          <Text style={styles.sectionTitle}>My Members</Text>
+          {trainerMembers.length === 0 ? (
+            <View style={styles.emptyCheckins}>
+              <Ionicons name="people-outline" size={28} color={colors.textDim} />
+              <Text style={styles.emptyCheckinsText}>No members assigned yet</Text>
+            </View>
+          ) : (
+            <View style={styles.checkinList}>
+              {trainerMembers.map((m, i) => {
+                const mColor = m.membershipType === 'vip' ? colors.primary : m.membershipType === 'premium' ? colors.secondary : colors.textMuted;
+                const initials = m.displayName ? m.displayName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) : '?';
+                return (
+                  <TouchableOpacity
+                    key={m.uid}
+                    style={[styles.checkinRow, i < trainerMembers.length - 1 && styles.checkinRowBorder]}
+                    onPress={() => navigation.navigate('TrainerMemberWorkout', { memberUid: m.uid, memberName: m.displayName })}
+                  >
+                    <View style={[styles.checkinAvatar, { backgroundColor: `${mColor}33` }]}>
+                      <Text style={[styles.checkinAvatarText, { color: mColor }]}>{initials}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.checkinName}>{m.displayName}</Text>
+                      <Text style={styles.checkinEmail}>{m.memberId || m.email}</Text>
+                    </View>
+                    <View style={[styles.planChip, { backgroundColor: `${mColor}22` }]}>
+                      <Text style={[styles.planChipText, { color: mColor }]}>{m.membershipType?.toUpperCase()}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textDim} style={{ marginLeft: 6 }} />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+        </>
+      )}
 
       {/* Admin: recent check-ins / Member: motivation */}
       {isAdmin ? (
@@ -377,17 +424,17 @@ export default function DashboardScreen() {
             </View>
           </Modal>
         </>
-      ) : (
+      ) : !isTrainer ? (
         <View style={styles.motivCard}>
           <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.secondary} />
           <Text style={styles.motivText}>{QUOTES[new Date().getDate() % QUOTES.length]}</Text>
         </View>
-      )}
+      ) : null}
 
       <View style={{ height: 32 }} />
 
     </ScrollView>
-    {!isAdmin && <MemberTabBar />}
+    {!isAdmin && !isTrainer && <MemberTabBar />}
     </View>
   );
 }
@@ -598,4 +645,6 @@ const styles = StyleSheet.create({
   },
   allCheckinsTitle: { color: colors.text, fontSize: 16, fontWeight: '800' },
   allCheckinsScroll: { flexGrow: 0 },
+  planChip: { borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
+  planChipText: { fontSize: 10, fontWeight: '700' },
 });
