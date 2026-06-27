@@ -28,7 +28,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
       if (data.scheduledDeleteAt && data.scheduledDeleteAt <= todayStr) {
         toDelete.push(doc.ref);
       } else {
-        users.push(serializeDoc(data));
+        users.push({ ref: doc.ref, data: serializeDoc(data) });
       }
     }
     if (toDelete.length) {
@@ -36,7 +36,24 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
       toDelete.forEach(ref => batch.delete(ref));
       await batch.commit();
     }
-    res.json(users);
+
+    const needsId = users.filter(u => !u.data.memberId);
+    if (needsId.length) {
+      const counterRef = db().doc('gymConfig/memberCounter');
+      await db().runTransaction(async tx => {
+        const counterSnap = await tx.get(counterRef);
+        let lastId = counterSnap.exists ? (counterSnap.data().lastId ?? 1000) : 1000;
+        needsId.forEach(u => {
+          lastId++;
+          const memberId = `SG-${String(lastId).padStart(4, '0')}`;
+          tx.update(u.ref, { memberId });
+          u.data.memberId = memberId;
+        });
+        tx.set(counterRef, { lastId }, { merge: true });
+      });
+    }
+
+    res.json(users.map(u => u.data));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -47,9 +64,22 @@ router.get('/:uid', requireAuth, async (req, res) => {
     return res.status(403).json({ error: 'Forbidden' });
   }
   try {
-    const snap = await db().doc(`users/${req.params.uid}`).get();
+    const ref = db().doc(`users/${req.params.uid}`);
+    const snap = await ref.get();
     if (!snap.exists) return res.status(404).json({ error: 'Not found' });
-    res.json(serializeDoc(snap.data()));
+    const data = snap.data();
+    if (!data.memberId) {
+      const counterRef = db().doc('gymConfig/memberCounter');
+      await db().runTransaction(async tx => {
+        const counterSnap = await tx.get(counterRef);
+        const lastId = counterSnap.exists ? (counterSnap.data().lastId ?? 1000) : 1000;
+        const newId = lastId + 1;
+        data.memberId = `SG-${String(newId).padStart(4, '0')}`;
+        tx.set(counterRef, { lastId: newId }, { merge: true });
+        tx.update(ref, { memberId: data.memberId });
+      });
+    }
+    res.json(serializeDoc(data));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
