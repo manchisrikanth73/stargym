@@ -20,24 +20,30 @@ router.post('/profile', requireAuth, async (req, res) => {
   }
   try {
     const ref = db().doc(`users/${uid}`);
-    const existing = await ref.get();
-    if (existing.exists) return res.status(200).json({ uid });
     const now = admin.FieldValue.serverTimestamp();
-    await ref.set({
-      uid, email, displayName,
-      phone: '',
-      role: 'member',
-      membershipType: 'basic',
-      isActive: false,
-      joinedAt: now,
-      activationStartDate: null,
-      activationEndDate: null,
-      age: age ?? null,
-      gender: gender || null,
-      weightKg: weightKg ?? null,
-      scheduledDeleteAt: null,
-      promoWorkoutExpiry: null,
+    let created = false;
+    await db().runTransaction(async tx => {
+      const snap = await tx.get(ref);
+      if (snap.exists) return;
+      created = true;
+      tx.set(ref, {
+        uid, email, displayName,
+        phone: '',
+        role: 'member',
+        membershipType: 'basic',
+        isActive: false,
+        joinedAt: now,
+        activationStartDate: null,
+        activationEndDate: null,
+        age: age ?? null,
+        gender: gender || null,
+        weightKg: weightKg ?? null,
+        scheduledDeleteAt: null,
+        promoWorkoutExpiry: null,
+      });
     });
+
+    if (!created) return res.status(200).json({ uid });
 
     const admins = await db().collection('users').where('role', '==', 'admin').get();
     if (!admins.empty) {
