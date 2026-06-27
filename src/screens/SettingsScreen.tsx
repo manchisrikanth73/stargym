@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   ScrollView, ActivityIndicator, Platform, Image, Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { useNavigation, DrawerActions, useFocusEffect } from '@react-navigation/native';
 import { updateProfile } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import { logOut } from '../services/auth';
 import { getUserProfile, updateUserProfile } from '../services/users';
 import { uploadProfilePhoto } from '../services/storage';
-import { submitReferral } from '../services/referrals';
+import { submitReferral, getMemberUnreadCount } from '../services/referrals';
 import { getMembershipPrices, MembershipPrices } from '../services/gymSettings';
 import { colors } from '../theme/colors';
 import dayjs from 'dayjs';
@@ -53,6 +53,7 @@ export default function SettingsScreen() {
 
   const [infoExpanded, setInfoExpanded] = useState(true);
   const [activeSubSection, setActiveSubSection] = useState<SubSection>(null);
+  const [inboxUnread, setInboxUnread] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -80,6 +81,14 @@ export default function SettingsScreen() {
       setLoading(false);
     })();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAdmin) {
+        getMemberUnreadCount().then(setInboxUnread).catch(() => {});
+      }
+    }, [isAdmin])
+  );
 
   const notify = (title: string, msg: string) => {
     if (Platform.OS === 'web') (window as any).alert(`${title}\n\n${msg}`);
@@ -376,7 +385,14 @@ export default function SettingsScreen() {
                     <Ionicons name="mail-outline" size={22} color={colors.textMuted} />
                   </View>
                   <Text style={styles.menuLabel}>Inbox</Text>
-                  <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+                  <View style={styles.menuRowRight}>
+                    {inboxUnread > 0 && (
+                      <View style={styles.inboxBadge}>
+                        <Text style={styles.inboxBadgeText}>{inboxUnread}</Text>
+                      </View>
+                    )}
+                    <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+                  </View>
                 </TouchableOpacity>
 
                 <View style={styles.menuDivider} />
@@ -669,4 +685,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 14,
     color: colors.text, fontSize: 15,
   },
+  menuRowRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  inboxBadge: {
+    backgroundColor: colors.primary, borderRadius: 10,
+    minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5,
+  },
+  inboxBadgeText: { color: '#000', fontSize: 11, fontWeight: '800' },
 });

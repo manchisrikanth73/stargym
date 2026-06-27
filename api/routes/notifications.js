@@ -29,6 +29,19 @@ router.get('/mine', requireAuth, async (req, res) => {
   }
 });
 
+router.get('/unread-count', requireAuth, async (req, res) => {
+  try {
+    const snap = await db()
+      .collection('notifications')
+      .where('recipientUid', '==', req.uid)
+      .where('read', '==', false)
+      .get();
+    res.json({ count: snap.size });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Mark a notification as read — only the recipient can do this
 router.patch('/:id/read', requireAuth, async (req, res) => {
   try {

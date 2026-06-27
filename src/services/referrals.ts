@@ -59,6 +59,13 @@ export async function getMemberNotifications(): Promise<MemberNotification[]> {
   return res.json();
 }
 
+export async function getMemberUnreadCount(): Promise<number> {
+  const res = await apiFetch('/notifications/unread-count');
+  if (!res.ok) return 0;
+  const data = await res.json();
+  return data.count ?? 0;
+}
+
 export async function markNotificationRead(id: string): Promise<void> {
   const res = await apiFetch(`/notifications/${id}/read`, { method: 'PATCH' });
   if (!res.ok) throw new Error(await res.text());
