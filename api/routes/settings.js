@@ -64,7 +64,25 @@ router.get('/legal', requireAuth, async (req, res) => {
 router.put('/legal', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { content } = req.body;
-    await legalRef().set({ content, publishedAt: admin.FieldValue.serverTimestamp() });
+    const db = admin.firestore();
+    const now = admin.FieldValue.serverTimestamp();
+
+    await legalRef().set({ content, publishedAt: now });
+
+    const members = await db.collection('users').where('role', '==', 'member').get();
+    if (!members.empty) {
+      const batch = db.batch();
+      members.docs.forEach(doc => {
+        batch.set(db.collection('notifications').doc(), {
+          recipientUid: doc.id,
+          type: 'legal_update',
+          read: false,
+          createdAt: now,
+        });
+      });
+      await batch.commit();
+    }
+
     res.json({});
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -61,7 +61,7 @@ export default function MemberInboxScreen() {
         <View style={styles.empty}>
           <Ionicons name="mail-open-outline" size={52} color={colors.textDim} />
           <Text style={styles.emptyText}>No messages yet</Text>
-          <Text style={styles.emptySub}>Referral confirmations will appear here</Text>
+          <Text style={styles.emptySub}>Gym updates and referral confirmations appear here</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
@@ -69,40 +69,57 @@ export default function MemberInboxScreen() {
             <TouchableOpacity
               key={n.id}
               style={[styles.card, !n.read && styles.cardUnread]}
-              onPress={() => !n.read && handleMarkRead(n.id)}
-              activeOpacity={n.read ? 1 : 0.75}
+              onPress={() => {
+                if (!n.read) handleMarkRead(n.id);
+                if (n.type === 'legal_update') navigation.navigate('LegalView' as never);
+              }}
+              activeOpacity={0.75}
             >
               {!n.read && <View style={styles.unreadDot} />}
 
-              <View style={styles.iconRow}>
-                <View style={styles.iconWrap}>
-                  <Ionicons name="gift" size={20} color={colors.secondary} />
-                </View>
-                <Text style={styles.cardTitle}>
-                  You successfully referred {n.refereeName}!
-                </Text>
-              </View>
-
-              <Text style={styles.cardSub}>
-                Your referral has been sent to the gym. Below are the details you submitted.
-              </Text>
-
-              <View style={styles.detailsBox}>
-                <View style={styles.detailRow}>
-                  <Ionicons name="person-outline" size={14} color={colors.textMuted} />
-                  <Text style={styles.detailText}>{n.refereeName}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Ionicons name="mail-outline" size={14} color={colors.textMuted} />
-                  <Text style={styles.detailText}>{n.refereeEmail}</Text>
-                </View>
-                {!!n.refereePhone && (
-                  <View style={styles.detailRow}>
-                    <Ionicons name="call-outline" size={14} color={colors.textMuted} />
-                    <Text style={styles.detailText}>{n.refereePhone}</Text>
+              {n.type === 'legal_update' ? (
+                <>
+                  <View style={styles.iconRow}>
+                    <View style={[styles.iconWrap, { backgroundColor: `${colors.primary}18` }]}>
+                      <Ionicons name="document-text" size={20} color={colors.primary} />
+                    </View>
+                    <Text style={styles.cardTitle}>Legal Information Updated</Text>
                   </View>
-                )}
-              </View>
+                  <Text style={styles.cardSub}>
+                    The gym has updated its legal information. Tap to read the latest version.
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <View style={styles.iconRow}>
+                    <View style={styles.iconWrap}>
+                      <Ionicons name="gift" size={20} color={colors.secondary} />
+                    </View>
+                    <Text style={styles.cardTitle}>
+                      You successfully referred {n.refereeName}!
+                    </Text>
+                  </View>
+                  <Text style={styles.cardSub}>
+                    Your referral has been sent to the gym. Below are the details you submitted.
+                  </Text>
+                  <View style={styles.detailsBox}>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="person-outline" size={14} color={colors.textMuted} />
+                      <Text style={styles.detailText}>{n.refereeName}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="mail-outline" size={14} color={colors.textMuted} />
+                      <Text style={styles.detailText}>{n.refereeEmail}</Text>
+                    </View>
+                    {!!n.refereePhone && (
+                      <View style={styles.detailRow}>
+                        <Ionicons name="call-outline" size={14} color={colors.textMuted} />
+                        <Text style={styles.detailText}>{n.refereePhone}</Text>
+                      </View>
+                    )}
+                  </View>
+                </>
+              )}
 
               <Text style={styles.timestamp}>
                 {dayjs(n.createdAt).format('DD MMM YYYY · hh:mm A')}
