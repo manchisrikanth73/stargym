@@ -175,7 +175,7 @@ export default function SettingsScreen() {
   const memberTypeCap = membershipType
     ? membershipType.charAt(0).toUpperCase() + membershipType.slice(1)
     : '';
-  const heroBadgeLabel = isAdmin ? 'Admin' : memberTypeCap ? `${memberTypeCap} Member` : 'Member';
+  const heroBadgeLabel = isAdmin ? 'Admin' : isTrainer ? 'Trainer' : memberTypeCap ? `${memberTypeCap} Member` : 'Member';
   const memberPlanPrice = membershipType ? prices[membershipType as keyof MembershipPrices] : null;
 
   return (
@@ -184,7 +184,7 @@ export default function SettingsScreen() {
       {/* ── Hero ── */}
       <View style={styles.hero}>
         <View style={styles.heroNav}>
-          {isAdmin ? (
+          {(isAdmin || isTrainer) ? (
             <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())} style={styles.heroNavBtn}>
               <Ionicons name="menu" size={22} color={colors.text} />
             </TouchableOpacity>
@@ -194,7 +194,7 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           )}
           <Text style={styles.heroTitle}>My Account</Text>
-          {isAdmin ? (
+          {(isAdmin || isTrainer) ? (
             <TouchableOpacity onPress={() => navigation.navigate('Dashboard' as never)} style={styles.heroNavBtn}>
               <Ionicons name="home-outline" size={22} color={colors.textMuted} />
             </TouchableOpacity>
@@ -229,8 +229,8 @@ export default function SettingsScreen() {
             <Text style={styles.heroName}>
               {[firstName, lastName].filter(Boolean).join(' ') || 'Your Name'}
             </Text>
-            <View style={[styles.heroBadge, isAdmin && styles.heroBadgeAdmin]}>
-              <Text style={[styles.heroBadgeText, isAdmin && styles.heroBadgeTextAdmin]}>
+            <View style={[styles.heroBadge, (isAdmin || isTrainer) && styles.heroBadgeAdmin]}>
+              <Text style={[styles.heroBadgeText, (isAdmin || isTrainer) && styles.heroBadgeTextAdmin]}>
                 {heroBadgeLabel}
               </Text>
             </View>
@@ -270,48 +270,64 @@ export default function SettingsScreen() {
                 {activeSubSection === 'personal' && (
                   <View style={styles.subContent}>
                     <View style={styles.subFormCard}>
-                      <Field label="First Name" value={firstName} onChange={setFirstName} placeholder="First name" />
-                      <View style={styles.fieldDivider} />
-                      <Field label="Last Name" value={lastName} onChange={setLastName} placeholder="Last name" />
-                      {isAdmin ? (
+                      {isTrainer ? (
                         <>
+                          <InfoRow label="Name" value={[firstName, lastName].filter(Boolean).join(' ') || '—'} />
                           <View style={styles.fieldDivider} />
-                          <Field label="Email" value={email} onChange={setEmail} placeholder="Email address" keyboardType="email-address" autoCapitalize="none" />
-                          <View style={styles.fieldDivider} />
-                          <Field label="Phone" value={phone} onChange={setPhone} placeholder="Phone number" keyboardType="phone-pad" />
+                          <InfoRow label="Email" value={email || '—'} />
+                          {!!phone && (<><View style={styles.fieldDivider} /><InfoRow label="Phone" value={phone} /></>)}
+                          {!!memberId && (<><View style={styles.fieldDivider} /><InfoRow label="Member ID" value={memberId} /></>)}
                         </>
                       ) : (
                         <>
+                          <Field label="First Name" value={firstName} onChange={setFirstName} placeholder="First name" />
                           <View style={styles.fieldDivider} />
-                          <Field label="Age" value={age || '—'} onChange={() => {}} editable={false} />
-                          <View style={styles.fieldDivider} />
-                          <Field label="Gender" value={gender || '—'} onChange={() => {}} editable={false} />
-                          <View style={styles.fieldDivider} />
-                          <Field label="Weight (kg)" value={weightKg} onChange={t => setWeightKg(t.replace(/[^0-9.]/g, ''))} placeholder="e.g. 75" keyboardType="decimal-pad" autoCapitalize="none" />
+                          <Field label="Last Name" value={lastName} onChange={setLastName} placeholder="Last name" />
+                          {isAdmin ? (
+                            <>
+                              <View style={styles.fieldDivider} />
+                              <Field label="Email" value={email} onChange={setEmail} placeholder="Email address" keyboardType="email-address" autoCapitalize="none" />
+                              <View style={styles.fieldDivider} />
+                              <Field label="Phone" value={phone} onChange={setPhone} placeholder="Phone number" keyboardType="phone-pad" />
+                            </>
+                          ) : (
+                            <>
+                              <View style={styles.fieldDivider} />
+                              <Field label="Age" value={age || '—'} onChange={() => {}} editable={false} />
+                              <View style={styles.fieldDivider} />
+                              <Field label="Gender" value={gender || '—'} onChange={() => {}} editable={false} />
+                              <View style={styles.fieldDivider} />
+                              <Field label="Weight (kg)" value={weightKg} onChange={t => setWeightKg(t.replace(/[^0-9.]/g, ''))} placeholder="e.g. 75" keyboardType="decimal-pad" autoCapitalize="none" />
+                            </>
+                          )}
                         </>
                       )}
                     </View>
-                    {success && (
-                      <View style={styles.successBox}>
-                        <Ionicons name="checkmark-circle-outline" size={16} color={colors.success} />
-                        <Text style={styles.successText}>Saved successfully.</Text>
-                      </View>
+                    {!isTrainer && (
+                      <>
+                        {success && (
+                          <View style={styles.successBox}>
+                            <Ionicons name="checkmark-circle-outline" size={16} color={colors.success} />
+                            <Text style={styles.successText}>Saved successfully.</Text>
+                          </View>
+                        )}
+                        <View style={styles.subActions}>
+                          <TouchableOpacity
+                            style={styles.cancelBtn}
+                            onPress={() => { setFirstName(original.firstName); setLastName(original.lastName); setEmail(original.email); setPhone(original.phone); }}
+                            disabled={saving}
+                          >
+                            <Text style={styles.cancelBtnText}>Cancel</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+                            onPress={handleSaveProfile} disabled={saving}
+                          >
+                            {saving ? <ActivityIndicator color="#000" size="small" /> : <Text style={styles.saveBtnText}>Save</Text>}
+                          </TouchableOpacity>
+                        </View>
+                      </>
                     )}
-                    <View style={styles.subActions}>
-                      <TouchableOpacity
-                        style={styles.cancelBtn}
-                        onPress={() => { setFirstName(original.firstName); setLastName(original.lastName); setEmail(original.email); setPhone(original.phone); }}
-                        disabled={saving}
-                      >
-                        <Text style={styles.cancelBtnText}>Cancel</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
-                        onPress={handleSaveProfile} disabled={saving}
-                      >
-                        {saving ? <ActivityIndicator color="#000" size="small" /> : <Text style={styles.saveBtnText}>Save</Text>}
-                      </TouchableOpacity>
-                    </View>
                   </View>
                 )}
 
