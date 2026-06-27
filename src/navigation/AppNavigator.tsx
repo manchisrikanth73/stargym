@@ -15,6 +15,8 @@ import InboxScreen from '../screens/InboxScreen';
 import BillingScreen from '../screens/BillingScreen';
 import PromotionsScreen from '../screens/PromotionsScreen';
 import QRCodeScreen from '../screens/QRCodeScreen';
+import LegalScreen from '../screens/LegalScreen';
+import LegalViewScreen from '../screens/LegalViewScreen';
 import MemberInboxScreen from '../screens/MemberInboxScreen';
 import DrawerContent from './DrawerContent';
 
@@ -44,6 +46,7 @@ function DrawerNav() {
       <Drawer.Screen name="Billing" component={BillingScreen} />
       <Drawer.Screen name="Promotions" component={PromotionsScreen} />
       <Drawer.Screen name="QRCode" component={QRCodeScreen} />
+      <Drawer.Screen name="Legal" component={LegalScreen} />
     </Drawer.Navigator>
   );
 }
@@ -56,6 +59,7 @@ export default function AppNavigator() {
       <Stack.Screen name="WorkoutLog" component={WorkoutLogScreen} />
       <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} />
       <Stack.Screen name="MemberInbox" component={MemberInboxScreen} />
+      <Stack.Screen name="LegalView" component={LegalViewScreen} />
     </Stack.Navigator>
   );
 }

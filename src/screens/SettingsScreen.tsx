@@ -391,7 +391,7 @@ export default function SettingsScreen() {
 
                 <View style={styles.menuDivider} />
 
-                <TouchableOpacity style={styles.menuRow} onPress={() => notify('Legal', 'Coming soon.')}>
+                <TouchableOpacity style={styles.menuRow} onPress={() => navigation.navigate('LegalView' as never)}>
                   <View style={styles.menuIconWrap}>
                     <Ionicons name="document-text-outline" size={22} color={colors.textMuted} />
                   </View>

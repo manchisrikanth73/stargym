@@ -43,3 +43,17 @@ export async function setWorkoutAccess(access: WorkoutAccess): Promise<void> {
 export function subscribeWorkoutAccess(cb: (access: WorkoutAccess) => void): () => void {
   return apiSSE('/sse/workout-access', data => cb(data as WorkoutAccess));
 }
+
+export async function getLegalContent(): Promise<{ content: string; publishedAt: string | null }> {
+  const res = await apiFetch('/settings/legal');
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function publishLegalContent(content: string): Promise<void> {
+  const res = await apiFetch('/settings/legal', {
+    method: 'PUT',
+    body: JSON.stringify({ content }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}

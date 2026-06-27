@@ -3,6 +3,7 @@ const { requireAuth, requireAdmin } = require('../middleware/auth');
 const admin = require('../admin');
 
 const settingsRef = () => admin.firestore().doc('gymConfig/membership');
+const legalRef   = () => admin.firestore().doc('gymConfig/legal');
 
 router.get('/membership', requireAuth, async (req, res) => {
   try {
@@ -43,6 +44,27 @@ router.put('/workout-access', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { basic, premium, vip } = req.body;
     await settingsRef().set({ workoutAccess: { basic, premium, vip } }, { merge: true });
+    res.json({});
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/legal', requireAuth, async (req, res) => {
+  try {
+    const snap = await legalRef().get();
+    if (!snap.exists) return res.json({ content: '', publishedAt: null });
+    const d = snap.data();
+    res.json({ content: d.content ?? '', publishedAt: d.publishedAt?.toDate().toISOString() ?? null });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/legal', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { content } = req.body;
+    await legalRef().set({ content, publishedAt: admin.FieldValue.serverTimestamp() });
     res.json({});
   } catch (err) {
     res.status(500).json({ error: err.message });
