@@ -45,10 +45,12 @@ export function subscribeReferralUnreadCount(cb: (count: number) => void): () =>
 
 export interface MemberNotification {
   id: string;
-  type: 'referral_sent' | 'legal_update';
+  type: 'referral_sent' | 'legal_update' | 'new_member';
   refereeName?: string;
   refereeEmail?: string;
   refereePhone?: string;
+  memberName?: string;
+  memberEmail?: string;
   read: boolean;
   createdAt: string;
 }

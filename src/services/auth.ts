@@ -9,14 +9,12 @@ import {
 } from 'firebase/auth';
 import { auth } from './firebase';
 import { createUserProfile } from './users';
-import { sendNewMemberNotification } from './email';
 
 export const signUp = async (email: string, password: string, displayName: string, age: number | null = null, gender = '', weightKg: number | null = null) => {
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName });
     await createUserProfile(cred.user.uid, email, displayName, age, gender, weightKg);
-    sendNewMemberNotification(displayName, email).catch(err => console.error('[EmailJS]', err));
     return cred;
   } catch (err: any) {
     if (err.code === 'auth/email-already-in-use') {
@@ -29,7 +27,6 @@ export const signUp = async (email: string, password: string, displayName: strin
         if (res.status === 404) {
           await updateProfile(signInCred.user, { displayName });
           await createUserProfile(signInCred.user.uid, email, displayName, age, gender, weightKg);
-          sendNewMemberNotification(displayName, email).catch(err2 => console.error('[EmailJS]', err2));
           return signInCred;
         }
       } catch {

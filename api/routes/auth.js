@@ -22,13 +22,14 @@ router.post('/profile', requireAuth, async (req, res) => {
     const ref = db().doc(`users/${uid}`);
     const existing = await ref.get();
     if (existing.exists) return res.status(200).json({ uid });
+    const now = admin.FieldValue.serverTimestamp();
     await ref.set({
       uid, email, displayName,
       phone: '',
       role: 'member',
       membershipType: 'basic',
       isActive: false,
-      joinedAt: admin.FieldValue.serverTimestamp(),
+      joinedAt: now,
       activationStartDate: null,
       activationEndDate: null,
       age: age ?? null,
@@ -37,6 +38,23 @@ router.post('/profile', requireAuth, async (req, res) => {
       scheduledDeleteAt: null,
       promoWorkoutExpiry: null,
     });
+
+    const admins = await db().collection('users').where('role', '==', 'admin').get();
+    if (!admins.empty) {
+      const batch = db().batch();
+      admins.docs.forEach(adminDoc => {
+        batch.set(db().collection('notifications').doc(), {
+          recipientUid: adminDoc.id,
+          type: 'new_member',
+          memberName: displayName,
+          memberEmail: email,
+          read: false,
+          createdAt: now,
+        });
+      });
+      await batch.commit();
+    }
+
     res.status(201).json({ uid });
   } catch (err) {
     res.status(500).json({ error: err.message });

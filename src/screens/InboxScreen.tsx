@@ -2,13 +2,17 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, DrawerActions, useFocusEffect } from '@react-navigation/native';
-import { getReferrals, markReferralRead, ReferralRecord } from '../services/referrals';
+import { getReferrals, markReferralRead, ReferralRecord, getMemberNotifications, markNotificationRead, MemberNotification } from '../services/referrals';
 import { colors } from '../theme/colors';
 import dayjs from 'dayjs';
 
+type InboxItem =
+  | { kind: 'referral'; data: ReferralRecord }
+  | { kind: 'notification'; data: MemberNotification };
+
 export default function InboxScreen() {
   const navigation = useNavigation<any>();
-  const [referrals, setReferrals] = useState<ReferralRecord[]>([]);
+  const [items, setItems] = useState<InboxItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(
@@ -16,8 +20,17 @@ export default function InboxScreen() {
       (async () => {
         setLoading(true);
         try {
-          const data = await getReferrals();
-          setReferrals(data);
+          const [refs, notifs] = await Promise.all([getReferrals(), getMemberNotifications()]);
+          const merged: InboxItem[] = [
+            ...refs.map(r => ({ kind: 'referral' as const, data: r })),
+            ...notifs.filter(n => n.type === 'new_member' || n.type === 'legal_update').map(n => ({ kind: 'notification' as const, data: n })),
+          ];
+          merged.sort((a, b) => {
+            const ta = a.kind === 'referral' ? a.data.createdAt : a.data.createdAt;
+            const tb = b.kind === 'referral' ? b.data.createdAt : b.data.createdAt;
+            return new Date(tb).getTime() - new Date(ta).getTime();
+          });
+          setItems(merged);
         } catch {
           // silently ignore
         } finally {
@@ -27,16 +40,33 @@ export default function InboxScreen() {
     }, [])
   );
 
-  const handleMarkRead = async (id: string) => {
+  const handleMarkReferralRead = async (id: string) => {
     try {
       await markReferralRead(id);
-      setReferrals(prev => prev.map(r => r.id === id ? { ...r, read: true } : r));
+      setItems(prev => prev.map(item =>
+        item.kind === 'referral' && item.data.id === id
+          ? { ...item, data: { ...item.data, read: true } }
+          : item
+      ));
     } catch {
       // silently ignore
     }
   };
 
-  const unreadCount = referrals.filter(r => !r.read).length;
+  const handleMarkNotifRead = async (id: string) => {
+    try {
+      await markNotificationRead(id);
+      setItems(prev => prev.map(item =>
+        item.kind === 'notification' && item.data.id === id
+          ? { ...item, data: { ...item.data, read: true } }
+          : item
+      ));
+    } catch {
+      // silently ignore
+    }
+  };
+
+  const unreadCount = items.filter(item => !item.data.read).length;
 
   return (
     <View style={styles.root}>
@@ -59,68 +89,114 @@ export default function InboxScreen() {
 
       {loading ? (
         <ActivityIndicator color={colors.primary} style={{ marginTop: 60 }} />
-      ) : referrals.length === 0 ? (
+      ) : items.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="mail-open-outline" size={52} color={colors.textDim} />
-          <Text style={styles.emptyText}>No referrals yet</Text>
-          <Text style={styles.emptySub}>Member referrals will appear here</Text>
+          <Text style={styles.emptyText}>Inbox is empty</Text>
+          <Text style={styles.emptySub}>Referrals and member signups will appear here</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
-          {referrals.map(r => (
-            <TouchableOpacity
-              key={r.id}
-              style={[styles.card, !r.read && styles.cardUnread]}
-              onPress={() => !r.read && handleMarkRead(r.id)}
-              activeOpacity={r.read ? 1 : 0.75}
-            >
-              {!r.read && <View style={styles.unreadDot} />}
+          {items.map(item => {
+            if (item.kind === 'referral') {
+              const r = item.data;
+              return (
+                <TouchableOpacity
+                  key={`ref-${r.id}`}
+                  style={[styles.card, !r.read && styles.cardUnread]}
+                  onPress={() => !r.read && handleMarkReferralRead(r.id)}
+                  activeOpacity={r.read ? 1 : 0.75}
+                >
+                  {!r.read && <View style={styles.unreadDot} />}
+                  <View style={styles.iconRow}>
+                    <View style={styles.iconWrap}>
+                      <Ionicons name="person-add" size={20} color={colors.primary} />
+                    </View>
+                    <Text style={styles.cardTitle}>
+                      {r.refereeName} referred by {r.referrerName}
+                    </Text>
+                  </View>
+                  <Text style={styles.cardSub}>Below are the referral details</Text>
+                  <View style={styles.detailsBox}>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="person-outline" size={14} color={colors.textMuted} />
+                      <Text style={styles.detailText}>{r.refereeName}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="mail-outline" size={14} color={colors.textMuted} />
+                      <Text style={styles.detailText}>{r.refereeEmail}</Text>
+                    </View>
+                    {!!r.refereePhone && (
+                      <View style={styles.detailRow}>
+                        <Ionicons name="call-outline" size={14} color={colors.textMuted} />
+                        <Text style={styles.detailText}>{r.refereePhone}</Text>
+                      </View>
+                    )}
+                    <View style={styles.cardDivider} />
+                    <View style={styles.detailRow}>
+                      <Ionicons name="person-circle-outline" size={14} color={colors.textMuted} />
+                      <Text style={styles.detailText}>{r.referrerName} · {r.referrerEmail}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.timestamp}>
+                    {dayjs(r.createdAt).format('DD MMM YYYY · hh:mm A')}
+                  </Text>
+                  {r.read && (
+                    <View style={styles.readChip}>
+                      <Ionicons name="checkmark-done" size={12} color={colors.textDim} />
+                      <Text style={styles.readChipText}>Read</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            }
 
-              <View style={styles.iconRow}>
-                <View style={styles.iconWrap}>
-                  <Ionicons name="person-add" size={20} color={colors.primary} />
+            const n = item.data;
+            const isNewMember = n.type === 'new_member';
+            return (
+              <TouchableOpacity
+                key={`notif-${n.id}`}
+                style={[styles.card, !n.read && styles.cardUnread]}
+                onPress={() => !n.read && handleMarkNotifRead(n.id)}
+                activeOpacity={n.read ? 1 : 0.75}
+              >
+                {!n.read && <View style={styles.unreadDot} />}
+                <View style={styles.iconRow}>
+                  <View style={styles.iconWrap}>
+                    <Ionicons
+                      name={isNewMember ? 'person-add-outline' : 'document-text-outline'}
+                      size={20}
+                      color={colors.primary}
+                    />
+                  </View>
+                  <Text style={styles.cardTitle}>
+                    {isNewMember ? `New member: ${n.memberName}` : 'Legal information updated'}
+                  </Text>
                 </View>
-                <Text style={styles.cardTitle}>
-                  {r.refereeName} referred by {r.referrerName}
-                </Text>
-              </View>
-
-              <Text style={styles.cardSub}>Below are the details</Text>
-
-              <View style={styles.detailsBox}>
-                <View style={styles.detailRow}>
-                  <Ionicons name="person-outline" size={14} color={colors.textMuted} />
-                  <Text style={styles.detailText}>{r.refereeName}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Ionicons name="mail-outline" size={14} color={colors.textMuted} />
-                  <Text style={styles.detailText}>{r.refereeEmail}</Text>
-                </View>
-                {!!r.refereePhone && (
-                  <View style={styles.detailRow}>
-                    <Ionicons name="call-outline" size={14} color={colors.textMuted} />
-                    <Text style={styles.detailText}>{r.refereePhone}</Text>
+                {isNewMember && (
+                  <View style={styles.detailsBox}>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="person-outline" size={14} color={colors.textMuted} />
+                      <Text style={styles.detailText}>{n.memberName}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="mail-outline" size={14} color={colors.textMuted} />
+                      <Text style={styles.detailText}>{n.memberEmail}</Text>
+                    </View>
                   </View>
                 )}
-                <View style={styles.cardDivider} />
-                <View style={styles.detailRow}>
-                  <Ionicons name="person-circle-outline" size={14} color={colors.textMuted} />
-                  <Text style={styles.detailText}>{r.referrerName} · {r.referrerEmail}</Text>
-                </View>
-              </View>
-
-              <Text style={styles.timestamp}>
-                {dayjs(r.createdAt).format('DD MMM YYYY · hh:mm A')}
-              </Text>
-
-              {r.read && (
-                <View style={styles.readChip}>
-                  <Ionicons name="checkmark-done" size={12} color={colors.textDim} />
-                  <Text style={styles.readChipText}>Read</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
+                <Text style={styles.timestamp}>
+                  {dayjs(n.createdAt).format('DD MMM YYYY · hh:mm A')}
+                </Text>
+                {n.read && (
+                  <View style={styles.readChip}>
+                    <Ionicons name="checkmark-done" size={12} color={colors.textDim} />
+                    <Text style={styles.readChipText}>Read</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
           <View style={{ height: 32 }} />
         </ScrollView>
       )}

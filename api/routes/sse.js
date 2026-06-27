@@ -90,14 +90,24 @@ router.get('/referrals-unread', async (req, res) => {
 
     startSSE(res);
 
-    const unsub = db().collection('referrals').where('read', '==', false).onSnapshot(snap => {
-      res.write(`data: ${JSON.stringify({ count: snap.size })}\n\n`);
-    }, err => {
-      console.error('[SSE /referrals-unread]', err.message);
-      res.end();
-    });
+    let referralCount = 0;
+    let notifCount = 0;
+    const emit = () => res.write(`data: ${JSON.stringify({ count: referralCount + notifCount })}\n\n`);
 
-    res.on('close', unsub);
+    const unsub1 = db().collection('referrals').where('read', '==', false).onSnapshot(snap => {
+      referralCount = snap.size;
+      emit();
+    }, err => { console.error('[SSE referrals-unread]', err.message); res.end(); });
+
+    const unsub2 = db().collection('notifications')
+      .where('recipientUid', '==', user.uid)
+      .where('read', '==', false)
+      .onSnapshot(snap => {
+        notifCount = snap.size;
+        emit();
+      }, err => { console.error('[SSE notifs-unread]', err.message); });
+
+    res.on('close', () => { unsub1(); unsub2(); });
   } catch (err) {
     res.status(401).json({ error: err.message });
   }
