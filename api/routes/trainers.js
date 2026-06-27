@@ -81,7 +81,7 @@ router.get('/:uid/members', requireAuth, async (req, res) => {
     const assignedUids = trainerSnap.data().assignedMemberUids ?? [];
     if (assignedUids.length === 0) return res.json([]);
     const memberDocs = await Promise.all(assignedUids.map(muid => db().doc(`users/${muid}`).get()));
-    res.json(memberDocs.filter(d => d.exists).map(d => serializeDoc(d.data())));
+    res.json(memberDocs.filter(d => d.exists && d.data().isActive !== false).map(d => serializeDoc(d.data())));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

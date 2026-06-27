@@ -20,6 +20,7 @@ import LegalViewScreen from '../screens/LegalViewScreen';
 import MemberInboxScreen from '../screens/MemberInboxScreen';
 import TrainersScreen from '../screens/TrainersScreen';
 import TrainerMembersScreen from '../screens/TrainerMembersScreen';
+import TrainerPlansScreen from '../screens/TrainerPlansScreen';
 import TrainerMemberWorkoutScreen from '../screens/TrainerMemberWorkoutScreen';
 import DrawerContent from './DrawerContent';
 
@@ -52,6 +53,7 @@ function DrawerNav() {
       <Drawer.Screen name="Legal" component={LegalScreen} />
       <Drawer.Screen name="Trainers" component={TrainersScreen} />
       <Drawer.Screen name="TrainerMembers" component={TrainerMembersScreen} />
+      <Drawer.Screen name="TrainerPlans" component={TrainerPlansScreen} />
     </Drawer.Navigator>
   );
 }

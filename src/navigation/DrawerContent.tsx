@@ -27,6 +27,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Legal',            icon: 'document-text-outline', screen: 'Legal',           adminOnly: true },
   { label: 'Settings',         icon: 'settings-outline',      screen: 'Settings',        adminOnly: true },
   { label: 'My Members',       icon: 'people-outline',        screen: 'TrainerMembers',  trainerOnly: true },
+  { label: 'Workout Plans',    icon: 'barbell-outline',       screen: 'TrainerPlans',    trainerOnly: true },
   { label: 'Settings',         icon: 'settings-outline',      screen: 'Settings',        trainerOnly: true },
 ];
 
