@@ -18,6 +18,7 @@ import QRCodeScreen from '../screens/QRCodeScreen';
 import LegalScreen from '../screens/LegalScreen';
 import LegalViewScreen from '../screens/LegalViewScreen';
 import MemberInboxScreen from '../screens/MemberInboxScreen';
+import TrainersScreen from '../screens/TrainersScreen';
 import DrawerContent from './DrawerContent';
 
 import { colors } from '../theme/colors';
@@ -47,6 +48,7 @@ function DrawerNav() {
       <Drawer.Screen name="Promotions" component={PromotionsScreen} />
       <Drawer.Screen name="QRCode" component={QRCodeScreen} />
       <Drawer.Screen name="Legal" component={LegalScreen} />
+      <Drawer.Screen name="Trainers" component={TrainersScreen} />
     </Drawer.Navigator>
   );
 }
