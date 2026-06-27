@@ -22,6 +22,7 @@ export default function SettingsScreen() {
   const user = auth.currentUser!;
 
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isTrainer, setIsTrainer] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [firstName, setFirstName] = useState('');
@@ -78,6 +79,7 @@ export default function SettingsScreen() {
       setOriginal({ firstName: fn, lastName: ln, email: em, phone: ph });
 
       setIsAdmin(profile?.role === 'admin');
+      setIsTrainer(profile?.role === 'trainer');
       const p = await getMembershipPrices();
       setPrices(p);
       setLoading(false);
@@ -313,7 +315,7 @@ export default function SettingsScreen() {
                   </View>
                 )}
 
-                {!isAdmin && (
+                {!isAdmin && !isTrainer && (
                   <>
                     {/* ── My Membership ── */}
                     <View style={styles.menuSubDivider} />
@@ -386,7 +388,7 @@ export default function SettingsScreen() {
           {/* ── Other rows ── */}
           <View style={[styles.menuCard, { marginTop: 12 }]}>
 
-            {!isAdmin && (
+            {!isAdmin && !isTrainer && (
               <>
                 <TouchableOpacity style={styles.menuRow} onPress={() => navigation.navigate('MemberInbox' as never)}>
                   <View style={styles.menuIconWrap}>
