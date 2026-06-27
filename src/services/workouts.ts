@@ -27,29 +27,34 @@ export type PreviousBest = {
   bestSet: { reps: number; weight: number | null; unit: 'kg' | 'lbs' };
 };
 
-export async function logWorkout(exercises: LoggedExercise[]): Promise<void> {
+export async function logWorkout(exercises: LoggedExercise[], targetUid?: string): Promise<void> {
   const res = await apiFetch('/workouts/log', {
     method: 'POST',
-    body: JSON.stringify({ exercises }),
+    body: JSON.stringify({ exercises, ...(targetUid ? { targetUid } : {}) }),
   });
   if (!res.ok) throw new Error(await res.text());
 }
 
-export async function getTodayLog(): Promise<WorkoutLog | null> {
-  const res = await apiFetch('/workouts/today');
+export async function getTodayLog(targetUid?: string): Promise<WorkoutLog | null> {
+  const url = targetUid ? `/workouts/today?targetUid=${targetUid}` : '/workouts/today';
+  const res = await apiFetch(url);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
-export async function getWorkoutHistory(limit = 30): Promise<WorkoutLog[]> {
-  const res = await apiFetch(`/workouts/history?limit=${limit}`);
+export async function getWorkoutHistory(limit = 30, targetUid?: string): Promise<WorkoutLog[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (targetUid) params.set('targetUid', targetUid);
+  const res = await apiFetch(`/workouts/history?${params}`);
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
-export async function getPreviousExercise(name: string): Promise<PreviousBest | null> {
-  const res = await apiFetch(`/workouts/previous-exercise?name=${encodeURIComponent(name)}`);
+export async function getPreviousExercise(name: string, targetUid?: string): Promise<PreviousBest | null> {
+  const params = new URLSearchParams({ name });
+  if (targetUid) params.set('targetUid', targetUid);
+  const res = await apiFetch(`/workouts/previous-exercise?${params}`);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(await res.text());
   return res.json();

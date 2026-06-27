@@ -23,4 +23,11 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, requireAdmin };
+function requireTrainer(req, res, next) {
+  if (req.role !== 'trainer' && !req.isAdmin) {
+    return res.status(403).json({ error: 'Trainer or admin only' });
+  }
+  next();
+}
+
+module.exports = { requireAuth, requireAdmin, requireTrainer };

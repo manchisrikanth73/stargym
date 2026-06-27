@@ -15,17 +15,19 @@ import { getUserProfile } from '../services/users';
 import { subscribeReferralUnreadCount } from '../services/referrals';
 import { colors } from '../theme/colors';
 
-type NavItem = { label: string; icon: string; screen: string | null; adminOnly?: boolean; memberOnly?: boolean };
+type NavItem = { label: string; icon: string; screen: string | null; adminOnly?: boolean; memberOnly?: boolean; trainerOnly?: boolean };
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'QR Code',         icon: 'qr-code-outline',       screen: 'QRCode',     adminOnly: true },
-  { label: 'Members',    icon: 'people-outline',   screen: 'Admin',      adminOnly: true },
-  { label: 'Inbox',      icon: 'mail-outline',     screen: 'Inbox',      adminOnly: true },
-  { label: 'Membership Plans', icon: 'card-outline', screen: 'Billing',    adminOnly: true },
-  { label: 'Promotions', icon: 'pricetag-outline', screen: 'Promotions', adminOnly: true },
-  { label: 'Trainers',   icon: 'barbell-outline',       screen: 'Trainers', adminOnly: true },
-  { label: 'Legal',      icon: 'document-text-outline', screen: 'Legal', adminOnly: true },
-  { label: 'Settings',   icon: 'settings-outline', screen: 'Settings',   adminOnly: true },
+  { label: 'QR Code',          icon: 'qr-code-outline',       screen: 'QRCode',          adminOnly: true },
+  { label: 'Members',          icon: 'people-outline',        screen: 'Admin',           adminOnly: true },
+  { label: 'Inbox',            icon: 'mail-outline',          screen: 'Inbox',           adminOnly: true },
+  { label: 'Membership Plans', icon: 'card-outline',          screen: 'Billing',         adminOnly: true },
+  { label: 'Promotions',       icon: 'pricetag-outline',      screen: 'Promotions',      adminOnly: true },
+  { label: 'Trainers',         icon: 'barbell-outline',       screen: 'Trainers',        adminOnly: true },
+  { label: 'Legal',            icon: 'document-text-outline', screen: 'Legal',           adminOnly: true },
+  { label: 'Settings',         icon: 'settings-outline',      screen: 'Settings',        adminOnly: true },
+  { label: 'My Members',       icon: 'people-outline',        screen: 'TrainerMembers',  trainerOnly: true },
+  { label: 'Settings',         icon: 'settings-outline',      screen: 'Settings',        trainerOnly: true },
 ];
 
 export default function DrawerContent(props: DrawerContentComponentProps) {
@@ -33,6 +35,7 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
   const name = user?.displayName ?? user?.email?.split('@')[0] ?? 'Athlete';
   const email = user?.email ?? '';
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isTrainer, setIsTrainer] = useState(false);
   const [photoURL, setPhotoURL] = useState<string | null>(user?.photoURL ?? null);
   const [inboxUnread, setInboxUnread] = useState(0);
 
@@ -41,9 +44,10 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
       getUserProfile(user.uid)
         .then(p => {
           setIsAdmin(p?.role === 'admin');
+          setIsTrainer(p?.role === 'trainer');
           setPhotoURL(p?.photoURL ?? user?.photoURL ?? null);
         })
-        .catch(() => setIsAdmin(false));
+        .catch(() => { setIsAdmin(false); setIsTrainer(false); });
     }
   }, [user?.uid]);
 
@@ -54,8 +58,9 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
 
   const visibleItems = NAV_ITEMS.filter(item => {
     if (item.adminOnly) return isAdmin;
-    if (item.memberOnly) return !isAdmin;
-    return true;
+    if (item.trainerOnly) return isTrainer;
+    if (item.memberOnly) return !isAdmin && !isTrainer;
+    return !isAdmin && !isTrainer;
   });
 
   return (
@@ -75,6 +80,12 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
             <View style={styles.adminBadge}>
               <Ionicons name="shield-checkmark" size={12} color={colors.secondary} />
               <Text style={styles.adminBadgeText}>Admin</Text>
+            </View>
+          )}
+          {isTrainer && (
+            <View style={styles.adminBadge}>
+              <Ionicons name="barbell-outline" size={12} color={colors.primary} />
+              <Text style={[styles.adminBadgeText, { color: colors.primary }]}>Trainer</Text>
             </View>
           )}
         </View>

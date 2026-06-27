@@ -19,6 +19,7 @@ router.use('/sse',           require('./routes/sse'));
 router.use('/referrals',     require('./routes/referrals'));
 router.use('/notifications', require('./routes/notifications'));
 router.use('/payments',      require('./routes/payments'));
+router.use('/trainers',      require('./routes/trainers'));
 router.use('/errors',        require('./routes/errors'));
 
 module.exports = router;

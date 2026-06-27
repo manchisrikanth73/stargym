@@ -1,6 +1,6 @@
 import { apiFetch } from './api';
 
-export type MemberRole = 'admin' | 'member';
+export type MemberRole = 'admin' | 'member' | 'trainer';
 export type MembershipType = 'basic' | 'premium' | 'vip';
 
 export interface UserProfile {
@@ -21,6 +21,7 @@ export interface UserProfile {
   scheduledDeleteAt: string | null;
   promoWorkoutExpiry: string | null;
   photoURL: string | null;
+  assignedMemberUids?: string[];
 }
 
 export async function createUserProfile(

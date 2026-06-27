@@ -19,6 +19,8 @@ import LegalScreen from '../screens/LegalScreen';
 import LegalViewScreen from '../screens/LegalViewScreen';
 import MemberInboxScreen from '../screens/MemberInboxScreen';
 import TrainersScreen from '../screens/TrainersScreen';
+import TrainerMembersScreen from '../screens/TrainerMembersScreen';
+import TrainerMemberWorkoutScreen from '../screens/TrainerMemberWorkoutScreen';
 import DrawerContent from './DrawerContent';
 
 import { colors } from '../theme/colors';
@@ -49,6 +51,7 @@ function DrawerNav() {
       <Drawer.Screen name="QRCode" component={QRCodeScreen} />
       <Drawer.Screen name="Legal" component={LegalScreen} />
       <Drawer.Screen name="Trainers" component={TrainersScreen} />
+      <Drawer.Screen name="TrainerMembers" component={TrainerMembersScreen} />
     </Drawer.Navigator>
   );
 }
@@ -62,6 +65,7 @@ export default function AppNavigator() {
       <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} />
       <Stack.Screen name="MemberInbox" component={MemberInboxScreen} />
       <Stack.Screen name="LegalView" component={LegalViewScreen} />
+      <Stack.Screen name="TrainerMemberWorkout" component={TrainerMemberWorkoutScreen} />
     </Stack.Navigator>
   );
 }
