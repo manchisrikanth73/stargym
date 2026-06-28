@@ -27,7 +27,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
       const data = doc.data();
       if (data.scheduledDeleteAt && data.scheduledDeleteAt <= todayStr) {
         toDelete.push(doc.ref);
-      } else {
+      } else if (data.role !== 'trainer') {
         users.push({ ref: doc.ref, data: serializeDoc(data) });
       }
     }
