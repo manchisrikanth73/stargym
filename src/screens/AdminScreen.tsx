@@ -66,7 +66,7 @@ export default function AdminScreen() {
       if (expired.length > 0) {
         await Promise.all(expired.map(u => deleteUserProfile(u.uid)));
       }
-      const active = all.filter(u => !expired.some(e => e.uid === u.uid));
+      const active = all.filter(u => !expired.some(e => e.uid === u.uid) && u.role !== 'trainer');
       setUsers(active);
       applyFilters(active, search, statusFilter);
     } catch (err: any) {
