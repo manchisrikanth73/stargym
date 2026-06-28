@@ -1,28 +1,18 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, TextInput, Modal, FlatList,
+  ActivityIndicator, TextInput, Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, DrawerActions, useFocusEffect } from '@react-navigation/native';
 import { colors } from '../theme/colors';
-import { TrainerProfile, getTrainers, createTrainer, deleteTrainer, assignMember, unassignMember } from '../services/trainers';
-import { UserProfile, getAllUsers } from '../services/users';
-
-const MEMBERSHIP_COLOR: Record<string, string> = {
-  basic: colors.textMuted,
-  premium: colors.secondary,
-  vip: colors.primary,
-};
+import { TrainerProfile, getTrainers, createTrainer, deleteTrainer } from '../services/trainers';
 
 export default function TrainersScreen() {
   const navigation = useNavigation<any>();
   const [trainers, setTrainers] = useState<TrainerProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [addModal, setAddModal] = useState(false);
-  const [manageModal, setManageModal] = useState<TrainerProfile | null>(null);
-  const [allMembers, setAllMembers] = useState<UserProfile[]>([]);
-  const [assignLoading, setAssignLoading] = useState<string | null>(null);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -43,16 +33,6 @@ export default function TrainersScreen() {
   }, []);
 
   useFocusEffect(load);
-
-  const openManage = async (trainer: TrainerProfile) => {
-    setManageModal(trainer);
-    try {
-      const members = await getAllUsers();
-      setAllMembers(members.filter(u => u.role === 'member'));
-    } catch {
-      setAllMembers([]);
-    }
-  };
 
   const handleCreate = async () => {
     if (!name.trim() || !email.trim() || !password.trim()) {
@@ -79,27 +59,6 @@ export default function TrainersScreen() {
       setTrainers(prev => prev.filter(t => t.uid !== trainer.uid));
     } catch (err: any) {
       (window as any).alert(err.message);
-    }
-  };
-
-  const handleToggleAssign = async (memberUid: string) => {
-    if (!manageModal) return;
-    const isAssigned = manageModal.assignedMemberUids?.includes(memberUid);
-    setAssignLoading(memberUid);
-    try {
-      if (isAssigned) {
-        await unassignMember(manageModal.uid, memberUid);
-      } else {
-        await assignMember(manageModal.uid, memberUid);
-      }
-      const updated = await getTrainers();
-      setTrainers(updated);
-      const refreshed = updated.find(t => t.uid === manageModal.uid);
-      if (refreshed) setManageModal(refreshed);
-    } catch (err: any) {
-      (window as any).alert(err.message);
-    } finally {
-      setAssignLoading(null);
     }
   };
 
@@ -150,9 +109,6 @@ export default function TrainersScreen() {
                   <Ionicons name="trash-outline" size={18} color={colors.error} />
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.manageBtn} onPress={() => openManage(trainer)}>
-                <Text style={styles.manageBtnText}>Manage Members</Text>
-              </TouchableOpacity>
             </View>
           ))}
           <View style={{ height: 32 }} />
@@ -183,56 +139,6 @@ export default function TrainersScreen() {
           </View>
         </View>
       </Modal>
-
-      {/* Manage Members Modal */}
-      <Modal visible={!!manageModal} transparent animationType="fade">
-        <View style={styles.overlay}>
-          <View style={[styles.modalBox, styles.manageBox]}>
-            <View style={styles.manageHeader}>
-              <Text style={styles.modalTitle}>{manageModal?.displayName}</Text>
-              <TouchableOpacity onPress={() => setManageModal(null)}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.manageSub}>Tap a member to assign or unassign</Text>
-            <FlatList
-              data={allMembers}
-              keyExtractor={m => m.uid}
-              style={styles.memberList}
-              renderItem={({ item: m }) => {
-                const isAssigned = manageModal?.assignedMemberUids?.includes(m.uid);
-                const busy = assignLoading === m.uid;
-                const mColor = MEMBERSHIP_COLOR[m.membershipType] ?? colors.primary;
-                return (
-                  <TouchableOpacity
-                    style={[styles.memberRow, isAssigned && styles.memberRowAssigned]}
-                    onPress={() => handleToggleAssign(m.uid)}
-                    disabled={busy}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.memberName}>{m.displayName}</Text>
-                      <Text style={styles.memberSub}>{m.memberId || m.email}</Text>
-                    </View>
-                    <View style={[styles.planChip, { backgroundColor: `${mColor}22` }]}>
-                      <Text style={[styles.planChipText, { color: mColor }]}>{m.membershipType?.toUpperCase()}</Text>
-                    </View>
-                    {busy ? (
-                      <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 10 }} />
-                    ) : (
-                      <Ionicons
-                        name={isAssigned ? 'checkmark-circle' : 'ellipse-outline'}
-                        size={22}
-                        color={isAssigned ? colors.primary : colors.textDim}
-                        style={{ marginLeft: 10 }}
-                      />
-                    )}
-                  </TouchableOpacity>
-                );
-              }}
-            />
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -244,7 +150,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingTop: 54, paddingBottom: 14,
   },
   heading: { color: colors.text, fontSize: 20, fontWeight: '800' },
-
   addBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: colors.primary, borderRadius: 10,
@@ -252,9 +157,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16, marginBottom: 12, alignSelf: 'flex-start',
   },
   addBtnText: { color: '#000', fontWeight: '700', fontSize: 14 },
-
   list: { padding: 16 },
-
   card: {
     backgroundColor: colors.surface, borderRadius: 16,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
@@ -273,19 +176,10 @@ const styles = StyleSheet.create({
   cardPhone: { color: colors.textMuted, fontSize: 12, marginTop: 1 },
   cardAssigned: { color: colors.secondary, fontSize: 12, fontWeight: '600', marginTop: 4 },
   deleteBtn: { padding: 4 },
-
-  manageBtn: {
-    marginTop: 12, borderRadius: 8, borderWidth: 1, borderColor: `${colors.primary}44`,
-    paddingVertical: 8, alignItems: 'center',
-  },
-  manageBtnText: { color: colors.primary, fontWeight: '700', fontSize: 13 },
-
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   emptyText: { color: colors.textMuted, fontSize: 16, fontWeight: '700' },
-
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 20 },
   modalBox: { backgroundColor: colors.surface, borderRadius: 20, padding: 24 },
-  manageBox: { maxHeight: '80%' },
   modalTitle: { color: colors.text, fontSize: 18, fontWeight: '800', marginBottom: 16 },
   input: {
     backgroundColor: colors.bg, borderRadius: 10, padding: 12,
@@ -303,22 +197,4 @@ const styles = StyleSheet.create({
     paddingVertical: 12, alignItems: 'center',
   },
   saveBtnText: { color: '#000', fontWeight: '800' },
-
-  manageHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  manageSub: { color: colors.textDim, fontSize: 12, marginBottom: 12 },
-  memberList: { flexGrow: 0 },
-  memberRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', marginBottom: 6,
-    backgroundColor: colors.bg,
-  },
-  memberRowAssigned: {
-    borderColor: `${colors.primary}44`,
-    backgroundColor: `${colors.primary}08`,
-  },
-  memberName: { color: colors.text, fontSize: 14, fontWeight: '600' },
-  memberSub: { color: colors.textDim, fontSize: 11, marginTop: 1 },
-  planChip: { borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
-  planChipText: { fontSize: 10, fontWeight: '700' },
 });
