@@ -8,6 +8,8 @@ const provider = new RazorpayProvider();
 
 const payDoc = uid => db().doc(`payments/${uid}`);
 
+const SUBSCRIPTION_TOTAL_COUNT = 120; // 10-year billing horizon; Razorpay requires a finite count
+
 // POST /payments/subscribe/:uid — admin creates subscription for a member
 router.post('/subscribe/:uid', requireAuth, requireAdmin, async (req, res) => {
   const { uid } = req.params;
@@ -46,7 +48,7 @@ router.post('/subscribe/:uid', requireAuth, requireAdmin, async (req, res) => {
     const { subscriptionId, shortUrl } = await provider.createSubscription({
       customerId: razorpayCustomerId,
       planId,
-      totalCount: 120,
+      totalCount: SUBSCRIPTION_TOTAL_COUNT,
     });
 
     const now = admin.FieldValue.serverTimestamp();

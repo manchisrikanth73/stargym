@@ -5,6 +5,9 @@ const RazorpayProvider = require('../providers/RazorpayProvider');
 const db = () => admin.firestore();
 const provider = new RazorpayProvider();
 
+const GRACE_PERIOD_DAYS       = 7;
+const MEMBERSHIP_EXTENSION_DAYS = 30;
+
 function addDays(isoDate, days) {
   const d = new Date(isoDate);
   d.setDate(d.getDate() + days);
@@ -21,14 +24,19 @@ async function findUidBySubscription(subscriptionId) {
 }
 
 async function logEvent(uid, eventType, razorpayId, amount, status) {
-  await db().collection('paymentEvents').add({
-    uid,
-    eventType,
-    razorpayId: razorpayId || '',
-    amount: amount ?? null,
-    status: status || '',
-    createdAt: admin.FieldValue.serverTimestamp(),
-  });
+  try {
+    await db().collection('paymentEvents').add({
+      uid,
+      eventType,
+      razorpayId: razorpayId || '',
+      amount: amount ?? null,
+      status: status || '',
+      createdAt: admin.FieldValue.serverTimestamp(),
+    });
+  } catch (err) {
+    // Audit log failure must not trigger a Razorpay retry — state is already written.
+    console.error(`[webhook] logEvent failed for ${eventType} uid=${uid}:`, err.message);
+  }
 }
 
 // POST /webhooks/razorpay
@@ -58,7 +66,7 @@ router.post('/razorpay', async (req, res) => {
         const sub = event.payload?.subscription?.entity;
         if (!sub) break;
         const uid = await findUidBySubscription(sub.id);
-        if (!uid) break;
+        if (!uid) { console.warn(`[webhook] ${eventType}: subscription ${sub.id} not found`); break; }
         const nextBilling = sub.charge_at
           ? new Date(sub.charge_at * 1000).toISOString().slice(0, 10)
           : null;
@@ -67,7 +75,7 @@ router.post('/razorpay', async (req, res) => {
           mandateStatus: 'active', nextBillingDate: nextBilling, graceUntil: null, updatedAt: now,
         });
         batch.update(db().doc(`users/${uid}`), {
-          activationEndDate: addDays(today, 30), isActive: true,
+          activationEndDate: addDays(today, MEMBERSHIP_EXTENSION_DAYS), isActive: true,
         });
         await batch.commit();
         await logEvent(uid, eventType, sub.id, null, 'active');
@@ -79,7 +87,7 @@ router.post('/razorpay', async (req, res) => {
         const payment = event.payload?.payment?.entity;
         if (!sub) break;
         const uid = await findUidBySubscription(sub.id);
-        if (!uid) break;
+        if (!uid) { console.warn(`[webhook] ${eventType}: subscription ${sub.id} not found`); break; }
         const nextBilling = sub.charge_at
           ? new Date(sub.charge_at * 1000).toISOString().slice(0, 10)
           : null;
@@ -88,7 +96,7 @@ router.post('/razorpay', async (req, res) => {
           nextBillingDate: nextBilling, failedPaymentCount: 0, graceUntil: null, updatedAt: now,
         });
         batch.update(db().doc(`users/${uid}`), {
-          activationEndDate: addDays(today, 30), isActive: true,
+          activationEndDate: addDays(today, MEMBERSHIP_EXTENSION_DAYS), isActive: true,
         });
         await batch.commit();
         await logEvent(uid, eventType, payment?.id || sub.id, payment ? payment.amount / 100 : null, 'charged');
@@ -99,7 +107,7 @@ router.post('/razorpay', async (req, res) => {
         const sub = event.payload?.subscription?.entity;
         if (!sub) break;
         const uid = await findUidBySubscription(sub.id);
-        if (!uid) break;
+        if (!uid) { console.warn(`[webhook] ${eventType}: subscription ${sub.id} not found`); break; }
         await db().doc(`payments/${uid}`).update({ mandateStatus: 'completed', updatedAt: now });
         await logEvent(uid, eventType, sub.id, null, 'completed');
         break;
@@ -109,7 +117,7 @@ router.post('/razorpay', async (req, res) => {
         const sub = event.payload?.subscription?.entity;
         if (!sub) break;
         const uid = await findUidBySubscription(sub.id);
-        if (!uid) break;
+        if (!uid) { console.warn(`[webhook] ${eventType}: subscription ${sub.id} not found`); break; }
         const batch = db().batch();
         batch.update(db().doc(`payments/${uid}`), { mandateStatus: 'cancelled', updatedAt: now });
         batch.update(db().doc(`users/${uid}`), { isActive: false });
@@ -122,10 +130,10 @@ router.post('/razorpay', async (req, res) => {
         const sub = event.payload?.subscription?.entity;
         if (!sub) break;
         const uid = await findUidBySubscription(sub.id);
-        if (!uid) break;
+        if (!uid) { console.warn(`[webhook] ${eventType}: subscription ${sub.id} not found`); break; }
         await db().doc(`payments/${uid}`).update({
           mandateStatus: 'halted',
-          graceUntil: addDays(today, 7),
+          graceUntil: addDays(today, GRACE_PERIOD_DAYS),
           updatedAt: now,
         });
         await logEvent(uid, eventType, sub.id, null, 'halted');
@@ -136,7 +144,7 @@ router.post('/razorpay', async (req, res) => {
         const sub = event.payload?.subscription?.entity;
         if (!sub) break;
         const uid = await findUidBySubscription(sub.id);
-        if (!uid) break;
+        if (!uid) { console.warn(`[webhook] ${eventType}: subscription ${sub.id} not found`); break; }
         await db().doc(`payments/${uid}`).update({ mandateStatus: 'paused', updatedAt: now });
         await logEvent(uid, eventType, sub.id, null, 'paused');
         break;
@@ -146,7 +154,7 @@ router.post('/razorpay', async (req, res) => {
         const sub = event.payload?.subscription?.entity;
         if (!sub) break;
         const uid = await findUidBySubscription(sub.id);
-        if (!uid) break;
+        if (!uid) { console.warn(`[webhook] ${eventType}: subscription ${sub.id} not found`); break; }
         await db().doc(`payments/${uid}`).update({ mandateStatus: 'active', updatedAt: now });
         await logEvent(uid, eventType, sub.id, null, 'active');
         break;
@@ -156,7 +164,7 @@ router.post('/razorpay', async (req, res) => {
         const payment = event.payload?.payment?.entity;
         if (!payment?.subscription_id) break;
         const uid = await findUidBySubscription(payment.subscription_id);
-        if (!uid) break;
+        if (!uid) { console.warn(`[webhook] ${eventType}: subscription ${payment.subscription_id} not found`); break; }
         await logEvent(uid, eventType, payment.id, payment.amount / 100, 'captured');
         break;
       }
@@ -165,11 +173,9 @@ router.post('/razorpay', async (req, res) => {
         const payment = event.payload?.payment?.entity;
         if (!payment?.subscription_id) break;
         const uid = await findUidBySubscription(payment.subscription_id);
-        if (!uid) break;
-        const paySnap = await db().doc(`payments/${uid}`).get();
-        const current = paySnap.data()?.failedPaymentCount ?? 0;
+        if (!uid) { console.warn(`[webhook] ${eventType}: subscription ${payment.subscription_id} not found`); break; }
         await db().doc(`payments/${uid}`).update({
-          failedPaymentCount: current + 1, updatedAt: now,
+          failedPaymentCount: admin.FieldValue.increment(1), updatedAt: now,
         });
         await logEvent(uid, eventType, payment.id, payment.amount / 100, 'failed');
         break;
@@ -179,8 +185,9 @@ router.post('/razorpay', async (req, res) => {
         console.log(`[webhook] Unhandled event: ${eventType}`);
     }
   } catch (err) {
-    console.error(`[webhook] Error processing ${eventType}:`, err.message);
-    // Return 200 to prevent Razorpay from retrying on server errors
+    // Return 500 so Razorpay retries — a Firestore write failed and the state was not saved.
+    console.error(`[webhook] ${eventType} failed — Razorpay will retry:`, err.message);
+    return res.status(500).json({ error: 'Internal error' });
   }
 
   res.json({ received: true });
