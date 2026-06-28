@@ -3,7 +3,12 @@ const admin = require('../admin');
 const RazorpayProvider = require('../providers/RazorpayProvider');
 
 const db = () => admin.firestore();
-const provider = new RazorpayProvider();
+
+let _provider = null;
+const provider = () => {
+  if (!_provider) _provider = new RazorpayProvider();
+  return _provider;
+};
 
 const GRACE_PERIOD_DAYS       = 7;
 const MEMBERSHIP_EXTENSION_DAYS = 30;
@@ -45,7 +50,7 @@ router.post('/razorpay', async (req, res) => {
   const signature = req.headers['x-razorpay-signature'];
   const rawBody = req.body; // Buffer
 
-  if (!provider.verifyWebhookSignature(rawBody, signature)) {
+  if (!provider().verifyWebhookSignature(rawBody, signature)) {
     return res.status(400).json({ error: 'Invalid signature' });
   }
 

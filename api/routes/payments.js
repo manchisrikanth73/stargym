@@ -4,7 +4,12 @@ const admin = require('../admin');
 const RazorpayProvider = require('../providers/RazorpayProvider');
 
 const db = () => admin.firestore();
-const provider = new RazorpayProvider();
+
+let _provider = null;
+const provider = () => {
+  if (!_provider) _provider = new RazorpayProvider();
+  return _provider;
+};
 
 const payDoc = uid => db().doc(`payments/${uid}`);
 
@@ -26,7 +31,7 @@ router.post('/subscribe/:uid', requireAuth, requireAdmin, async (req, res) => {
     const existing = await payDoc(uid).get();
     let razorpayCustomerId = existing.exists ? existing.data().razorpayCustomerId : null;
     if (!razorpayCustomerId) {
-      const result = await provider.createCustomer({
+      const result = await provider().createCustomer({
         name: user.displayName || 'Member',
         email: user.email || '',
         phone: user.phone || '',
@@ -40,12 +45,12 @@ router.post('/subscribe/:uid', requireAuth, requireAdmin, async (req, res) => {
     let planId = planCacheSnap.exists ? planCacheSnap.data()?.[planKey] : null;
     if (!planId) {
       const planName = `${membershipType.charAt(0).toUpperCase() + membershipType.slice(1)} Membership`;
-      const result = await provider.createPlan({ name: planName, amount: Number(amount) });
+      const result = await provider().createPlan({ name: planName, amount: Number(amount) });
       planId = result.planId;
       await db().doc('gymConfig/razorpayPlans').set({ [planKey]: planId }, { merge: true });
     }
 
-    const { subscriptionId, shortUrl } = await provider.createSubscription({
+    const { subscriptionId, shortUrl } = await provider().createSubscription({
       customerId: razorpayCustomerId,
       planId,
       totalCount: SUBSCRIPTION_TOTAL_COUNT,
@@ -79,7 +84,7 @@ router.post('/order/:uid', requireAuth, requireAdmin, async (req, res) => {
   const { amount } = req.body;
   if (!amount) return res.status(400).json({ error: 'amount is required' });
   try {
-    const { orderId } = await provider.createOrder({
+    const { orderId } = await provider().createOrder({
       amount: Number(amount),
       receipt: `${uid}_${Date.now()}`,
     });
@@ -96,7 +101,7 @@ router.post('/verify', requireAuth, async (req, res) => {
   if (!orderId || !paymentId || !signature) {
     return res.status(400).json({ error: 'orderId, paymentId, and signature are required' });
   }
-  const valid = provider.verifyPaymentSignature({ orderId, paymentId, signature });
+  const valid = provider().verifyPaymentSignature({ orderId, paymentId, signature });
   if (!valid) return res.status(400).json({ error: 'Invalid signature' });
   res.json({ verified: true });
 });
@@ -162,7 +167,7 @@ router.post('/cancel/:uid', requireAuth, requireAdmin, async (req, res) => {
     if (!snap.exists || !snap.data().subscriptionId) {
       return res.status(404).json({ error: 'No active subscription' });
     }
-    await provider.cancelSubscription(snap.data().subscriptionId);
+    await provider().cancelSubscription(snap.data().subscriptionId);
     await payDoc(uid).update({ mandateStatus: 'cancelled', updatedAt: admin.FieldValue.serverTimestamp() });
     res.json({});
   } catch (err) {
@@ -178,7 +183,7 @@ router.post('/pause/:uid', requireAuth, requireAdmin, async (req, res) => {
     if (!snap.exists || !snap.data().subscriptionId) {
       return res.status(404).json({ error: 'No active subscription' });
     }
-    await provider.pauseSubscription(snap.data().subscriptionId);
+    await provider().pauseSubscription(snap.data().subscriptionId);
     await payDoc(uid).update({ mandateStatus: 'paused', updatedAt: admin.FieldValue.serverTimestamp() });
     res.json({});
   } catch (err) {
@@ -194,7 +199,7 @@ router.post('/resume/:uid', requireAuth, requireAdmin, async (req, res) => {
     if (!snap.exists || !snap.data().subscriptionId) {
       return res.status(404).json({ error: 'No active subscription' });
     }
-    await provider.resumeSubscription(snap.data().subscriptionId);
+    await provider().resumeSubscription(snap.data().subscriptionId);
     await payDoc(uid).update({ mandateStatus: 'active', updatedAt: admin.FieldValue.serverTimestamp() });
     res.json({});
   } catch (err) {
