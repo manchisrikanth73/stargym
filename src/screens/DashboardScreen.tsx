@@ -175,9 +175,18 @@ export default function DashboardScreen() {
       {/* Header */}
       <View style={styles.header}>
         {(isAdmin || isTrainer) ? (
-          <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())}>
-            <Ionicons name="menu" size={28} color={colors.text} />
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())}>
+              <Ionicons name="menu" size={28} color={colors.text} />
+            </TouchableOpacity>
+            {isAdmin ? (
+              <TouchableOpacity onPress={() => navigation.navigate('QRCode' as never)}>
+                <Ionicons name="qr-code-outline" size={24} color={colors.textMuted} />
+              </TouchableOpacity>
+            ) : (
+              <View style={{ width: 24 }} />
+            )}
+          </>
         ) : (
           <TouchableOpacity style={styles.avatar} onPress={() => navigation.navigate('Settings' as never)}>
             <Text style={styles.avatarText}>{displayName[0].toUpperCase()}</Text>

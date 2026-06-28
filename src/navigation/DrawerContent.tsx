@@ -18,7 +18,6 @@ import { colors } from '../theme/colors';
 type NavItem = { label: string; icon: string; screen: string | null; adminOnly?: boolean; memberOnly?: boolean; trainerOnly?: boolean };
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'QR Code',          icon: 'qr-code-outline',       screen: 'QRCode',          adminOnly: true },
   { label: 'Members',          icon: 'people-outline',        screen: 'Admin',           adminOnly: true },
   { label: 'Inbox',            icon: 'mail-outline',          screen: 'Inbox',           adminOnly: true },
   { label: 'Membership Plans', icon: 'card-outline',          screen: 'Billing',         adminOnly: true },
