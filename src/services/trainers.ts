@@ -43,3 +43,9 @@ export async function unassignMember(trainerUid: string, memberUid: string): Pro
   const res = await apiFetch(`/trainers/${trainerUid}/members/${memberUid}`, { method: 'DELETE' });
   if (!res.ok) throw new Error(await res.text());
 }
+
+export async function getTrainerForMember(memberUid: string): Promise<TrainerProfile | null> {
+  const res = await apiFetch(`/trainers/member/${memberUid}`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}

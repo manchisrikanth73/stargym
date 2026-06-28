@@ -17,6 +17,7 @@ import { createUserProfile, updateUserProfile, disableMember, enableMember, User
 import DateInput from '../components/DateInput';
 import PromoSection from '../components/PromoSection';
 import PaymentSection from '../components/PaymentSection';
+import TrainerSection from '../components/TrainerSection';
 import { notify } from '../utils/notify';
 import { colors } from '../theme/colors';
 
@@ -225,6 +226,14 @@ export default function AdminUserDetailScreen() {
             uid={existing!.uid}
             initialExpiries={{ workout: existing?.promoWorkoutExpiry ?? null }}
           />
+        </View>
+      )}
+
+      {/* Trainer assignment — existing members only */}
+      {!isNew && (
+        <View style={styles.section}>
+          <Label>Trainer</Label>
+          <TrainerSection uid={existing!.uid} />
         </View>
       )}
 

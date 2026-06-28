@@ -70,6 +70,20 @@ router.delete('/:uid', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// GET /trainers/member/:memberUid — find which trainer is assigned to a specific member
+router.get('/member/:memberUid', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const snap = await db().collection('users')
+      .where('role', '==', 'trainer')
+      .where('assignedMemberUids', 'array-contains', req.params.memberUid)
+      .limit(1)
+      .get();
+    res.json(snap.empty ? null : serializeDoc(snap.docs[0].data()));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/:uid/members', requireAuth, async (req, res) => {
   const { uid } = req.params;
   if (!req.isAdmin && req.uid !== uid) {
