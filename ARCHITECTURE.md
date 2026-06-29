@@ -162,6 +162,22 @@ App.tsx
 
 ---
 
+## QR Check-In Flow (Web)
+
+```
+Gym QR encodes: https://<host>/?checkin=STARGYM-CHECKIN-V1
+
+Path A — native camera scan:
+  Scan QR → Safari opens URL → DashboardScreen detects ?checkin= → navigate to Checkin
+  → CheckinScreen.web.tsx reads param, clears URL, validates, setDone(true), checkIn() in bg
+
+Path B — in-app live scanner:
+  Tap Check In → getUserMedia (needs HTTPS) → rAF loop → jsQR on 600px-downscaled frame
+  → match GYM_CHECKIN_CODE → setDone(true) → checkIn() in bg
+```
+
+---
+
 ## Build & Deploy
 
 ```bash
