@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "StarGym",
+    "slug": "stargym",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "stargym",
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Scan the gym entrance QR code to check in"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "name": "StarGym",
+      "shortName": "StarGym",
+      "description": "Gym check-in and attendance tracking",
+      "themeColor": "#00BFFF",
+      "backgroundColor": "#0D1B2A",
+      "display": "standalone",
+      "orientation": "portrait"
+    },
+    "platforms": ["ios", "android", "web"]
+  }
+}
